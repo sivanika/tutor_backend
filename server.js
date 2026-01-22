@@ -20,8 +20,13 @@ connectDB()
 
 const app = express()
 app.get("/", (req, res) => {
-  res.send("Backend is live!");
+  res.send("Server is running!");
 });
+
+app.get("/api", (req, res) => {
+  res.json({ message: "API is working" });
+});
+
 
 app.use(cors())
 app.use(express.json())
