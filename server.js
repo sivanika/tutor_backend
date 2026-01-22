@@ -19,6 +19,9 @@ console.log("EMAIL_PASSWORD:", process.env.EMAIL_PASSWORD ? "Loaded" : "Missing"
 connectDB()
 
 const app = express()
+app.get("/", (req, res) => {
+  res.send("Backend is live!");
+});
 
 app.use(cors())
 app.use(express.json())
