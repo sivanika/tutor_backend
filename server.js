@@ -44,7 +44,7 @@ const server = http.createServer(app)
 // ✅ THEN CREATE SOCKET.IO WITH SAME SERVER
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "https://tutor-frontend-j2r5ojmp9-sivanikas-projects.vercel.app/",
     methods: ["GET", "POST"],
   },
 })
