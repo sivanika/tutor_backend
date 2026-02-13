@@ -6,6 +6,9 @@ import User from "../models/User.js";
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 
+/* ============================
+   COMPLETE STUDENT PROFILE
+============================ */
 router.put(
   "/complete-profile",
   protect,
@@ -15,16 +18,14 @@ router.put(
   ]),
   async (req, res) => {
     try {
-      const user = await User.findById(req.user._id);
+      // ✅ FIX: use req.user.id (not _id)
+      const user = await User.findById(req.user.id);
 
       if (!user || user.role !== "student") {
         return res.status(403).json({ message: "Not authorized" });
       }
 
       const data = req.body;
-
-      // ❌ DO NOT update email again
-      // user.email = data.email || user.email;
 
       // Basic info
       user.name = `${data.firstName} ${data.lastName}`;
@@ -42,7 +43,7 @@ router.put(
       user.parentRelationship = data.parentRelationship;
       user.parentConsent = data.parentConsent === "true";
 
-      // Availability (safe parse)
+      // Availability parsing
       let availability = [];
       if (typeof data.availability === "string") {
         try {
@@ -59,7 +60,7 @@ router.put(
       user.subscriptionTier = data.subscriptionTier;
       user.professorPreferences = data.professorPreferences;
 
-      // Files
+      // File uploads
       if (req.files?.studentPhoto) {
         user.studentPhoto = req.files.studentPhoto[0].path;
       }
@@ -67,15 +68,16 @@ router.put(
         user.studentDocument = req.files.studentDocument[0].path;
       }
 
-      // Profile status
+      // 🔥 CRITICAL FIX
       user.profileCompleted = true;
-      user.isVerified = false; // Admin must verify later
+      user.isVerified = false;
 
       await user.save();
 
       res.json({
         success: true,
-        message: "Student profile submitted for verification",
+        message: "Student profile submitted successfully",
+        profileCompleted: user.profileCompleted,
       });
     } catch (err) {
       console.error("STUDENT PROFILE ERROR:", err);

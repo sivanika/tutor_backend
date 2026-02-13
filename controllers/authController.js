@@ -82,6 +82,11 @@ export const loginUser = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
+    console.log("LOGIN USER:", {
+      id: user._id,
+      role: user.role,
+      profileCompleted: user.profileCompleted,
+    });
 
     console.log("✅ Login success");
 

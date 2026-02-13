@@ -27,6 +27,8 @@ router.post("/login", async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      profileCompleted: user.profileCompleted,
+      isVerified: user.isVerified,
     },
   });
 });
@@ -61,6 +63,8 @@ router.post("/register", async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        profileCompleted: user.profileCompleted,
+        isVerified: user.isVerified,
       },
     });
   } catch (error) {
