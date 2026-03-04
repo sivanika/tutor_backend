@@ -1,0 +1,77 @@
+import "./config/env.js" // ← MUST be first: loads .env before any other module
+import express from "express"
+import http from "http"
+import { Server } from "socket.io"
+import cors from "cors"
+import connectDB from "./config/db.js"
+import adminRoutes from "./routes/adminRoutes.js"
+// routes
+import authRoutes from "./routes/authRoutes.js"
+import sessionRoutes from "./routes/sessionRoutes.js"
+import chatRoutes from "./routes/chatRoutes.js"
+import feedbackRoutes from "./routes/feedbackRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import professorRoutes from "./routes/professorRoutes.js";
+import studentRoutes from "./routes/studentRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import path from "path";
+// connect to database
+connectDB()
+
+const app = express()
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://tutor-hours-frontend.vercel.app",
+  process.env.CLIENT_URL
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+}))
+app.use(express.json())
+
+// routes
+app.use("/api/auth", authRoutes)
+app.use("/api/admin", adminRoutes)
+app.use("/api/sessions", sessionRoutes)
+app.use("/api/chat", chatRoutes)
+app.use("/api/feedback", feedbackRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/professors", professorRoutes);
+app.use("/api/student", studentRoutes);
+app.use("/api/payment", paymentRoutes);
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+// ✅ CREATE HTTP SERVER FIRST
+const server = http.createServer(app)
+
+// ✅ THEN CREATE SOCKET.IO WITH SAME SERVER
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+  },
+})
+
+// make io available globally
+global.io = io;
+
+io.on("connection", (socket) => {
+  console.log("Socket connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("Socket disconnected:", socket.id);
+  });
+});
+
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () =>
+  console.log(`Server running with Socket.IO on port ${PORT}`)
+);
