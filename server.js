@@ -22,16 +22,24 @@ const app = express()
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://tutor-frontend-ten.vercel.app",
+  "https://tutor-hours-frontend.vercel.app",
   process.env.CLIENT_URL
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // allow requests with no origin (like mobile apps, curl)
+    if (!origin) return callback(null, true);
+
+    const isAllowed = allowedOrigins.includes(origin) || origin.endsWith(".vercel.app");
+
+    if (isAllowed) {
       callback(null, true);
     } else {
-      callback(new Error("Not allowed by CORS"));
+      console.error("CORS blocked request from origin:", origin);
+      // Passing an error to callback triggers Express 500 error, so we just reject it.
+      // Many recommend callback(new Error(...)) but we just want a standard CORS rejection
+      callback(new Error(`Not allowed by CORS: ${origin}`));
     }
   },
   credentials: true,
@@ -55,12 +63,8 @@ const server = http.createServer(app)
 // ✅ THEN CREATE SOCKET.IO WITH SAME SERVER
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "https://tutor-frontend-ten.vercel.app",
-    ],
-    methods: ["GET", "POST","PUT","DELETE"],
-    credentials: true,
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
   },
 })
 

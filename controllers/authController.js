@@ -116,8 +116,8 @@ export const forgotPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     // 3️⃣  Build the reset URL with the RAW token (not the hash)
-    const resetLink = `${process.env.CLIENT_URL || "http://localhost:5173"
-      }/reset-password/${rawToken}`;
+    const baseUrl = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/$/, "");
+    const resetLink = `${baseUrl}/reset-password/${rawToken}`;
 
     // 4️⃣  Send email — if it fails, roll back the token
     try {
@@ -128,14 +128,15 @@ export const forgotPassword = async (req, res) => {
       await user.save({ validateBeforeSave: false });
       console.error("Email failed — token cleared:", emailError.message);
       return res.status(500).json({
-        message: "Could not send reset email. Please try again later.",
+        message: "Email configuration error on the server. Please check Render environment variables (EMAIL_USER, EMAIL_PASS) or use a Gmail App Password.",
+        errorDetail: emailError.message
       });
     }
 
     res.json({ message: "Reset link sent! Please check your inbox (and spam folder)." });
   } catch (error) {
     console.error("Forgot password error:", error.message);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", errorDetail: error.message });
   }
 };
 
