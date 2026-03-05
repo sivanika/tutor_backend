@@ -21,9 +21,7 @@ connectDB()
 const app = express()
 
 const allowedOrigins = [
-  "http://localhost:5173",
   "https://tutor-frontend-ten.vercel.app",
-  process.env.CLIENT_URL
 ].filter(Boolean);
 
 app.use(cors({
