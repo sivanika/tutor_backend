@@ -19,16 +19,7 @@ import path from "path";
 connectDB()
 
 const app = express()
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || ["http://localhost:5173", "https://tutor-frontend-ten.vercel.app"].includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-}))
+app.use(cors())
 app.use(express.json())
 
 // routes
