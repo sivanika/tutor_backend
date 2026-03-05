@@ -22,7 +22,7 @@ const app = express()
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://tutor-frontend-ten.vercel.app/",
+  "https://tutor-frontend-ten.vercel.app",
   process.env.CLIENT_URL
 ].filter(Boolean);
 
@@ -56,7 +56,8 @@ const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST","PUT","DELETE"],
+    credentials: true,
   },
 })
 
