@@ -19,14 +19,9 @@ import path from "path";
 connectDB()
 
 const app = express()
-
-const allowedOrigins = [
-  "https://tutor-frontend-ten.vercel.app",
-].filter(Boolean);
-
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || ["http://localhost:5173", "https://tutor-frontend-ten.vercel.app"].includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -53,7 +48,10 @@ const server = http.createServer(app)
 // ✅ THEN CREATE SOCKET.IO WITH SAME SERVER
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: [
+      "http://localhost:5173",
+      "https://tutor-frontend-ten.vercel.app",
+    ],
     methods: ["GET", "POST","PUT","DELETE"],
     credentials: true,
   },
