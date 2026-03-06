@@ -13,7 +13,9 @@ const buildTransporter = () => {
   }
 
   return nodemailer.createTransport({
-    service: "gmail",          // let nodemailer resolve Gmail's SMTP settings
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // Use TLS
     auth: { user, pass },
   })
 }
