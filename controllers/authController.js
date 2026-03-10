@@ -45,6 +45,8 @@ export const registerUser = async (req, res) => {
         role: user.role,
         profileCompleted: user.profileCompleted,
         isVerified: user.isVerified,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionTier: user.subscriptionTier,
       },
     });
   } catch (error) {
@@ -78,6 +80,8 @@ export const loginUser = async (req, res) => {
         role: user.role,
         isVerified: user.isVerified,
         profileCompleted: user.profileCompleted,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionTier: user.subscriptionTier,
       },
     });
   } catch (error) {

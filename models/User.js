@@ -80,6 +80,10 @@ const userSchema = new mongoose.Schema({
   // ── Misc ───────────────────────────────────────────
   studentsHelped: { type: Number, default: 0 },
 
+  // ── Featured / Recommended (admin-controlled) ──────
+  isFeatured: { type: Boolean, default: false },
+  featuredOrder: { type: Number, default: 0 },  // lower = appears first
+
   // ── Password reset (stores SHA256 hash, never plaintext) ──
   resetPasswordToken: String,
   resetPasswordExpire: Date,

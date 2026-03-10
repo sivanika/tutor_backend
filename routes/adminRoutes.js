@@ -290,4 +290,59 @@ router.put("/user-status/:id", protect, adminOnly, async (req, res) => {
   }
 });
 
+/* ============================
+   GET ALL VERIFIED PROFESSORS WITH FEATURED STATUS (ADMIN)
+============================ */
+router.get("/featured-professors", protect, adminOnly, async (req, res) => {
+  try {
+    const professors = await User.find({
+      role: "professor",
+      isVerified: true,
+    })
+      .select("-password")
+      .sort({ featuredOrder: 1, name: 1 });
+    res.json(professors);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to load professors" });
+  }
+});
+
+/* ============================
+   TOGGLE FEATURED + SET ORDER (ADMIN)
+   PUT /api/admin/feature-professor/:id
+   Body: { isFeatured: true/false, featuredOrder: 1 }
+============================ */
+router.put("/feature-professor/:id", protect, adminOnly, async (req, res) => {
+  try {
+    const { isFeatured, featuredOrder } = req.body;
+    const user = await User.findById(req.params.id);
+
+    if (!user || user.role !== "professor") {
+      return res.status(404).json({ message: "Professor not found" });
+    }
+
+    if (typeof isFeatured === "boolean") user.isFeatured = isFeatured;
+    if (typeof featuredOrder === "number") user.featuredOrder = featuredOrder;
+
+    await user.save();
+
+    await AdminLog.create({
+      admin: req.user.id,
+      action: `${isFeatured ? "Featured" : "Unfeatured"} professor`,
+      target: `${user.email} (${user._id})`,
+      description: `Featured: ${user.isFeatured}, Order: ${user.featuredOrder}`,
+    });
+
+    res.json({
+      success: true,
+      message: `Professor ${user.isFeatured ? "marked as featured" : "removed from featured"}`,
+      isFeatured: user.isFeatured,
+      featuredOrder: user.featuredOrder,
+    });
+  } catch (err) {
+    console.error("FEATURE PROFESSOR ERROR:", err);
+    res.status(500).json({ message: "Failed to update featured status" });
+  }
+});
+
 export default router;
