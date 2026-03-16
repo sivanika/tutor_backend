@@ -1,5 +1,6 @@
 import express from "express";
 import User from "../models/User.js";
+import Session from "../models/Session.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 import AdminLog from "../models/AdminLog.js";
 import { sendApprovalMail } from "../utils/sendEmail.js";
@@ -199,10 +200,16 @@ router.get("/analytics-charts", protect, adminOnly, async (req, res) => {
   try {
     const students = await User.countDocuments({ role: "student" });
     const professors = await User.countDocuments({ role: "professor" });
+    const verifiedProfessors = await User.countDocuments({ role: "professor", isVerified: true });
+    const pendingProfessors = await User.countDocuments({ role: "professor", isVerified: false });
+    const totalUsers = students + professors;
 
     res.json({
       labels: ["Students", "Professors"],
       data: [students, professors],
+      totalUsers,
+      verifiedProfessors,
+      pendingProfessors,
     });
   } catch (err) {
     res.status(500).json({ message: "Failed to load chart data" });
@@ -342,6 +349,164 @@ router.put("/feature-professor/:id", protect, adminOnly, async (req, res) => {
   } catch (err) {
     console.error("FEATURE PROFESSOR ERROR:", err);
     res.status(500).json({ message: "Failed to update featured status" });
+  }
+});
+
+/* ============================
+   GET ALL STUDENTS (ADMIN)
+============================ */
+router.get("/students", protect, adminOnly, async (req, res) => {
+  try {
+    const { search = "", tier = "" } = req.query;
+    const query = { role: "student" };
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+    if (tier) query.subscriptionTier = tier;
+
+    const students = await User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 });
+
+    res.json(students);
+  } catch (err) {
+    console.error("ADMIN STUDENTS ERROR:", err);
+    res.status(500).json({ message: "Failed to load students" });
+  }
+});
+
+/* ============================
+   GET SINGLE STUDENT DETAIL
+============================ */
+router.get("/student/:id", protect, adminOnly, async (req, res) => {
+  try {
+    const student = await User.findById(req.params.id).select("-password");
+    if (!student || student.role !== "student") {
+      return res.status(404).json({ message: "Student not found" });
+    }
+    res.json(student);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to load student" });
+  }
+});
+
+/* ============================
+   GET ALL PROFESSORS FULL (ADMIN)
+   Includes pending + verified
+============================ */
+router.get("/professors-full", protect, adminOnly, async (req, res) => {
+  try {
+    const { search = "", status = "" } = req.query;
+    const query = { role: "professor" };
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { subjects: { $regex: search, $options: "i" } },
+      ];
+    }
+    if (status === "verified") query.isVerified = true;
+    if (status === "pending") query.isVerified = false;
+
+    const professors = await User.find(query)
+      .select("-password")
+      .sort({ isVerified: -1, createdAt: -1 });
+
+    res.json(professors);
+  } catch (err) {
+    console.error("ADMIN PROFESSORS FULL ERROR:", err);
+    res.status(500).json({ message: "Failed to load professors" });
+  }
+});
+
+/* ============================
+   GET SINGLE PROFESSOR DETAIL
+============================ */
+router.get("/professor/:id", protect, adminOnly, async (req, res) => {
+  try {
+    const prof = await User.findById(req.params.id).select("-password");
+    if (!prof || prof.role !== "professor") {
+      return res.status(404).json({ message: "Professor not found" });
+    }
+    res.json(prof);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to load professor" });
+  }
+});
+
+/* ============================
+   GET EARNINGS (ADMIN)
+   Calculates per-professor:
+   - totalSessions (sessions they created)
+   - grossEarning = hourlyRate * totalSessions (estimated)
+   - commission = grossEarning * (commissionRate / 100)
+   - netPayout = grossEarning - commission
+============================ */
+router.get("/earnings", protect, adminOnly, async (req, res) => {
+  try {
+
+    // Get all verified professors
+    const professors = await User.find({ role: "professor", isVerified: true })
+      .select("name email subjects hourlyRate commissionRate studentsHelped createdAt")
+      .sort({ createdAt: -1 });
+
+    // For each professor, get their session count
+    const earningsData = await Promise.all(
+      professors.map(async (prof) => {
+        const totalSessions = await Session.countDocuments({ professor: prof._id });
+        const activeStudents = await Session.aggregate([
+          { $match: { professor: prof._id } },
+          { $unwind: "$students" },
+          { $group: { _id: "$students.student" } },
+          { $count: "count" },
+        ]);
+
+        const rate = parseFloat(prof.hourlyRate) || 0;
+        const commRate = parseFloat(prof.commissionRate) || 18;
+        const grossEarning = rate * totalSessions;
+        const commission = (grossEarning * commRate) / 100;
+        const netPayout = grossEarning - commission;
+
+        return {
+          _id: prof._id,
+          name: prof.name || "Unknown",
+          email: prof.email,
+          subjects: prof.subjects || "—",
+          hourlyRate: rate,
+          commissionRate: commRate,
+          totalSessions,
+          activeStudents: activeStudents[0]?.count || 0,
+          grossEarning: Math.round(grossEarning),
+          commission: Math.round(commission),
+          netPayout: Math.round(netPayout),
+          joinedAt: prof.createdAt,
+        };
+      })
+    );
+
+    // Platform totals
+    const totalGross = earningsData.reduce((s, p) => s + p.grossEarning, 0);
+    const totalCommission = earningsData.reduce((s, p) => s + p.commission, 0);
+    const totalSessions = earningsData.reduce((s, p) => s + p.totalSessions, 0);
+    const totalStudents = await User.countDocuments({ role: "student" });
+
+    res.json({
+      professors: earningsData,
+      summary: {
+        totalGross,
+        totalCommission,
+        totalSessions,
+        totalStudents,
+        totalProfessors: professors.length,
+      },
+    });
+  } catch (err) {
+    console.error("ADMIN EARNINGS ERROR:", err);
+    res.status(500).json({ message: "Failed to load earnings" });
   }
 });
 

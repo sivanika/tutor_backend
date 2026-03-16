@@ -2,9 +2,9 @@ import mongoose from "mongoose"
 
 const messageSchema = new mongoose.Schema(
   {
-    session: {
+    conversation: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Session",
+      ref: "Conversation",
       required: true,
     },
     sender: {
@@ -16,14 +16,22 @@ const messageSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    seenBy: [
+    readBy: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
     ],
+    // Keep for backwards compat with old session-based messages
+    session: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Session",
+    },
   },
   { timestamps: true }
 )
+
+// Index for fast message lookup by conversation
+messageSchema.index({ conversation: 1, createdAt: 1 })
 
 export default mongoose.model("Message", messageSchema)

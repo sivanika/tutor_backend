@@ -6,7 +6,7 @@ import { sendApprovalMail, sendPasswordResetMail } from "../utils/sendEmail.js";
 
 // Generate JWT
 const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "1d" });
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
 // ================= REGISTER =================
