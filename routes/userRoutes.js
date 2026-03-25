@@ -10,7 +10,7 @@ const router = express.Router();
  */
 router.get("/me", protect, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("-password");
+    const user = await User.findById(req.user._id).select("-password").populate("subscriptionPlan");
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: "Failed to load profile" });

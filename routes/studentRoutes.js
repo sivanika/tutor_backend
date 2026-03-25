@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import { protect } from "../middleware/authMiddleware.js";
 import User from "../models/User.js";
+import SubscriptionPlan from "../models/SubscriptionPlan.js";
 import { sendPendingApprovalMail } from "../utils/sendEmail.js";
 
 const router = express.Router();
@@ -58,8 +59,18 @@ router.put(
       user.availability = availability;
 
       // Subscription
-      user.subscriptionTier = data.subscriptionTier;
+      user.subscriptionTier = data.subscriptionTier || "free_trial";
       user.professorPreferences = data.professorPreferences;
+
+      if (!user.subscriptionPlan && user.subscriptionTier === "free_trial") {
+        const freePlan = await SubscriptionPlan.findOne({ name: /Free Trial/i });
+        if (freePlan) {
+          user.subscriptionPlan = freePlan._id;
+          user.subscriptionStatus = "active";
+          user.currentPlanSessionsBooked = 0;
+          user.viewedProfessors = [];
+        }
+      }
 
       // File uploads
       if (req.files?.studentPhoto) {
