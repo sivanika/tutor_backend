@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import { protect } from "../middleware/authMiddleware.js";
 import User from "../models/User.js";
+import { sendPendingApprovalMail } from "../utils/sendEmail.js";
 
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
@@ -73,6 +74,11 @@ router.put(
       user.isVerified = false;
 
       await user.save();
+
+      // 🔔 Non-blocking confirmation email
+      sendPendingApprovalMail(user.email, user.name, "student").catch((e) =>
+        console.warn("[studentRoutes] pending email failed:", e.message)
+      );
 
       res.json({
         success: true,

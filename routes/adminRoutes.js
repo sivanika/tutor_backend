@@ -383,7 +383,7 @@ router.get("/students", protect, adminOnly, async (req, res) => {
 ============================ */
 router.get("/student/:id", protect, adminOnly, async (req, res) => {
   try {
-    const student = await User.findById(req.params.id).select("-password");
+    const student = await User.findById(req.params.id).select("-password").populate("subscriptionPlan");
     if (!student || student.role !== "student") {
       return res.status(404).json({ message: "Student not found" });
     }

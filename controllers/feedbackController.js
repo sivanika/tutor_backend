@@ -1,4 +1,6 @@
 import Feedback from "../models/Feedback.js";
+import Notification from "../models/Notification.js";
+import { emitNotification } from "../socketHandler.js";
 
 // Student gives feedback
 export const createFeedback = async (req, res) => {
@@ -15,6 +17,15 @@ export const createFeedback = async (req, res) => {
       rating,
       message,
     });
+
+    // Notify Professor
+    const notif = await Notification.create({
+      user: professorId,
+      title: "New Review Received",
+      message: `A student left a ${rating}-star review for you.`,
+      type: "info",
+    });
+    emitNotification(professorId, notif);
 
     res.json(feedback);
   } catch (err) {

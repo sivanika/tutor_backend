@@ -1,4 +1,7 @@
 import Session from "../models/Session.js"
+import User from "../models/User.js"
+import Notification from "../models/Notification.js"
+import { emitNotification } from "../socketHandler.js"
 
 // CREATE SESSION (Professor only)
 export const createSession = async (req, res) => {
@@ -25,7 +28,7 @@ export const createSession = async (req, res) => {
 export const getAllSessions = async (req, res) => {
   try {
     const sessions = await Session.find()
-      .populate("professor", "name email")
+      .populate("professor", "name email hourlyRate")
       .populate("students.student", "name email")
     res.json(sessions)
   } catch (err) {
@@ -43,6 +46,23 @@ export const enrollSession = async (req, res) => {
     if (!session)
       return res.status(404).json({ message: "Session not found" })
 
+    // --- Subscription Limit Check ---
+    const studentUser = await User.findById(req.user.id).populate("subscriptionPlan")
+    if (!studentUser) return res.status(404).json({ message: "User not found" })
+    
+    const plan = studentUser.subscriptionPlan;
+    if (!plan || !plan.isActive) {
+      return res.status(403).json({ message: "An active subscription plan is required to book a session. Please upgrade your plan." })
+    }
+
+    if (plan.maxSessions !== null && (studentUser.currentPlanSessionsBooked || 0) >= plan.maxSessions) {
+      return res.status(402).json({ 
+        message: "LIMIT_REACHED", 
+        detail: `You have reached your limit of ${plan.maxSessions} booked sessions on the ${plan.name} plan. Please upgrade to continue booking.`
+      })
+    }
+    // --------------------------------
+
     // Check if student is already enrolled
     const alreadyEnrolled = session.students.some(
       (s) => s.student.toString() === req.user.id
@@ -57,7 +77,20 @@ export const enrollSession = async (req, res) => {
     })
     await session.save()
 
+    // Increment user booking count
+    studentUser.currentPlanSessionsBooked = (studentUser.currentPlanSessionsBooked || 0) + 1;
+    await studentUser.save();
+
     global.io?.emit("dashboard:update")
+
+    // Notify Professor about the booking
+    const notif = await Notification.create({
+      user: session.professor,
+      title: "New Student Booking",
+      message: `A student has booked your session.`,
+      type: "success",
+    })
+    emitNotification(session.professor, notif)
 
     res.json({ message: "Enrolled successfully" })
   } catch (err) {
@@ -96,6 +129,46 @@ export const markSessionComplete = async (req, res) => {
   } catch (err) {
     console.error("MARK COMPLETE ERROR:", err)
     res.status(500).json({ message: "Mark complete failed" })
+  }
+}
+
+// CANCEL ENROLLMENT (Student)
+export const cancelEnrollment = async (req, res) => {
+  try {
+    const session = await Session.findById(req.params.id);
+
+    if (!session)
+      return res.status(404).json({ message: "Session not found" });
+
+    const studentIndex = session.students.findIndex(
+      (s) => s.student.toString() === req.user.id
+    );
+
+    if (studentIndex === -1)
+      return res.status(400).json({ message: "You are not enrolled in this session" });
+
+    if (session.students[studentIndex].status === "completed")
+      return res.status(400).json({ message: "Cannot cancel a completed session" });
+
+    // Remove student from array
+    session.students.splice(studentIndex, 1);
+    await session.save();
+
+    global.io?.emit("dashboard:update");
+
+    // Notify Professor about the cancellation
+    const notif = await Notification.create({
+      user: session.professor,
+      title: "Student Cancelled Booking",
+      message: `${req.user.name || "A student"} has cancelled their enrollment for your session.`,
+      type: "warning",
+    });
+    emitNotification(session.professor, notif);
+
+    res.json({ message: "Successfully cancelled enrollment" });
+  } catch (err) {
+    console.error("CANCEL ENROLLMENT ERROR:", err);
+    res.status(500).json({ message: "Cancel enrollment failed" });
   }
 }
 

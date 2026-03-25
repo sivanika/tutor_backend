@@ -17,6 +17,12 @@ export function emitToUser(io, userId, event, data) {
   io.to(String(userId)).emit(event, data)
 }
 
+export function emitNotification(userId, notification) {
+  if (global.io) {
+    global.io.to(String(userId)).emit("newNotification", notification);
+  }
+}
+
 export default function socketHandler(io) {
   // Attach io to global so controllers can push via HTTP routes
   global.io = io

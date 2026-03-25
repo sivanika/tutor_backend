@@ -1,9 +1,10 @@
 import express from "express";
 import multer from "multer";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, optionalProtect } from "../middleware/authMiddleware.js";
 import User from "../models/User.js";
 import Feedback from "../models/Feedback.js";
 import Session from "../models/Session.js";
+import { sendPendingApprovalMail } from "../utils/sendEmail.js";
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.get("/featured", async (req, res) => {
       isVerified: true,
       status: "active",
     })
-      .select("name subjects profilePhoto studentsHelped featuredOrder isFeatured")
+      .select("name subjects profilePhoto studentsHelped featuredOrder isFeatured hourlyRate")
       .sort({ isFeatured: -1, featuredOrder: 1 })  // ← prioritize featured, then admin-controlled display order
       .lean();
 
@@ -70,6 +71,7 @@ router.get("/featured", async (req, res) => {
           subjects: p.subjects || "",
           profilePhoto: p.profilePhoto || null,
           featuredOrder: p.featuredOrder ?? 0,
+          hourlyRate: p.hourlyRate || null,
           avgRating: ratingData.avgRating
             ? parseFloat(ratingData.avgRating.toFixed(1))
             : null,
@@ -91,7 +93,7 @@ router.get("/featured", async (req, res) => {
    GET SINGLE PROFESSOR PROFILE (PUBLIC)
    Gating (blur/lock) is enforced on the frontend.
 ============================ */
-router.get("/:id", async (req, res) => {
+router.get("/:id", optionalProtect, async (req, res) => {
   try {
     const professor = await User.findOne({
       _id: req.params.id,
@@ -100,13 +102,39 @@ router.get("/:id", async (req, res) => {
       status: "active",
     })
       .select(
-        "name subjects bio headline profilePhoto yearsExperience teachingLevel teachingStyle specializations availability phone email studentsHelped"
+        "name subjects bio headline profilePhoto yearsExperience teachingLevel teachingStyle specializations availability phone email studentsHelped hourlyRate"
       )
       .lean();
 
     if (!professor) {
       return res.status(404).json({ message: "Tutor not found" });
     }
+
+    // --- Subscription Limit Check for Profile Views ---
+    if (req.user && req.user.role === "student") {
+      const studentUser = await User.findById(req.user.id).populate("subscriptionPlan");
+      if (studentUser) {
+        const plan = studentUser.subscriptionPlan;
+        const hasViewed = studentUser.viewedProfessors.some(id => id.toString() === professor._id.toString());
+        
+        if (!hasViewed) {
+          if (plan && plan.maxProfileViews !== null && studentUser.viewedProfessors.length >= plan.maxProfileViews) {
+            return res.status(402).json({
+              message: "LIMIT_REACHED",
+              detail: `You have reached your limit of viewing ${plan.maxProfileViews} professor profiles. Please upgrade your plan.`
+            });
+          } else if (!plan && studentUser.viewedProfessors.length >= 3) {
+            return res.status(402).json({
+              message: "LIMIT_REACHED",
+              detail: `Please subscribe to a plan to view more professor profiles.`
+            });
+          }
+          studentUser.viewedProfessors.push(professor._id);
+          await studentUser.save();
+        }
+      }
+    }
+    // --------------------------------------------------
 
     // Aggregate rating
     const ratingAgg = await Feedback.aggregate([
@@ -224,6 +252,11 @@ router.post(
       user.isVerified = false; // Admin must verify
 
       await user.save();
+
+      // 🔔 Non-blocking confirmation email
+      sendPendingApprovalMail(user.email, user.name, "professor").catch((e) =>
+        console.warn("[professorRoutes] pending email failed:", e.message)
+      );
 
       res.json({
         success: true,

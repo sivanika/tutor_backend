@@ -1,5 +1,7 @@
 import Conversation from "../models/Conversation.js"
 import Message from "../models/Message.js"
+import Notification from "../models/Notification.js"
+import { emitNotification } from "../socketHandler.js"
 import mongoose from "mongoose"
 
 // GET /api/conversations — list all conversations for logged-in user
@@ -180,9 +182,19 @@ export const sendMessage = async (req, res) => {
     // ✅ Push to ALL participants' personal rooms (always-on since joinUser at login)
     const io = global.io
     if (io) {
-      conv.participants.forEach((pid) => {
+      conv.participants.forEach(async (pid) => {
         console.log(`📨 push newMessage → uid room: ${pid}`)
         io.to(String(pid)).emit("newMessage", payload)
+
+        if (String(pid) !== String(senderId)) {
+          const notif = await Notification.create({
+            user: pid,
+            title: "New Message",
+            message: `You received a new message.`,
+            type: "info"
+          });
+          emitNotification(pid, notif);
+        }
       })
     }
 

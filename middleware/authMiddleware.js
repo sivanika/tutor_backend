@@ -30,6 +30,24 @@ export const protect = async (req, res, next) => {
 };
 
 /* =========================
+   OPTIONAL PROTECT
+========================= */
+export const optionalProtect = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return next();
+    }
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await User.findById(decoded.id).select("-password");
+    next();
+  } catch (error) {
+    next(); // Ignore errors, keep user as undefined
+  }
+};
+
+/* =========================
    ADMIN ONLY
 ========================= */
 export const adminOnly = (req, res, next) => {

@@ -16,6 +16,8 @@ import professorRoutes from "./routes/professorRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import socketHandler from "./socketHandler.js";
 import path from "path";
 // connect to database
@@ -61,6 +63,8 @@ app.use("/api/professors", professorRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/announcements", announcementRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 // ✅ CREATE HTTP SERVER FIRST
 const server = http.createServer(app)
@@ -78,6 +82,10 @@ const io = new Server(server, {
 global.io = io;
 
 socketHandler(io);
+
+// Make io accessible in Express route controllers
+global.io = io;
+
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () =>

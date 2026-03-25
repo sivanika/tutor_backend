@@ -60,7 +60,11 @@ const userSchema = new mongoose.Schema({
   parentPhone: String,
   parentRelationship: String,
   parentConsent: Boolean,
-  subscriptionTier: { type: String, default: null },
+  subscriptionTier: { type: String, default: null }, // Legacy string identifier (free_trial, premium)
+  subscriptionPlan: { type: mongoose.Schema.Types.ObjectId, ref: "SubscriptionPlan" }, // New dynamic plan reference
+  viewedProfessors: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Tracks unique profiles viewed
+  currentPlanSessionsBooked: { type: Number, default: 0 }, // Tracks sessions booked in current cycle
+
   subscriptionStatus: {
     type: String,
     enum: ["active", "inactive", "expired", "cancelled"],

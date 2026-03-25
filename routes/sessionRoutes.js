@@ -10,6 +10,7 @@ import {
   markSessionComplete,
   cancelSession,
   rescheduleSession,
+  cancelEnrollment,
 } from "../controllers/sessionController.js"
 
 const router = express.Router()
@@ -22,6 +23,9 @@ router.get("/", protect, getAllSessions)
 
 // Student enrolls session
 router.post("/:id/enroll", protect, enrollSession)
+
+// Student cancels enrollment
+router.post("/:id/cancel-enrollment", protect, cancelEnrollment)
 
 // Student marks session as complete
 router.post("/:id/complete", protect, markSessionComplete)
