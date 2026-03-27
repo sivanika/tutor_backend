@@ -1,24 +1,27 @@
-import { Resend } from "resend";
+import { Resend } from "resend"
+
+// ✅ Change ONLY this one line when you get your domain
+const FROM_EMAIL = "TutorHours <onboarding@resend.dev>"
+// const FROM_EMAIL = "TutorHours <noreply@yourdomain.com>"  // ← uncomment after domain setup
 
 const getResendClient = () => {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) {
     throw new Error(
       "Resend API key missing! Please set RESEND_API_KEY in your environment variables."
-    );
+    )
   }
-  return new Resend(apiKey);
-};
+  return new Resend(apiKey)
+}
 
 // ─── Approval mail ────────────────────────────────────────────────────────────
 export const sendApprovalMail = async (email, name) => {
-  console.log("[sendApprovalMail] using Resend to:", email);
-
-  const resend = getResendClient();
+  console.log("[sendApprovalMail] sending to:", email)
+  const resend = getResendClient()
 
   try {
     const { data, error } = await resend.emails.send({
-      from: "TutorHours <onboarding@resend.dev>", // Resend's default testing domain
+      from: FROM_EMAIL,
       to: [email],
       subject: "Profile Approved — TutorHours",
       html: `
@@ -26,37 +29,34 @@ export const sendApprovalMail = async (email, name) => {
           <h2 style="color:#6A11CB;margin-bottom:8px">Profile Approved! 🎉</h2>
           <p>Hello <strong>${name}</strong>,</p>
           <p>Your TutorHours profile has been <strong>approved</strong>. You can now log in and start teaching.</p>
-          <a href="${process.env.CLIENT_URL || "http://localhost:5173"
-        }/login"
+          <a href="${(process.env.CLIENT_URL || "http://localhost:5173").replace(/\/$/, "")}/login"
              style="display:inline-block;margin-top:20px;padding:12px 28px;background:linear-gradient(135deg,#6A11CB,#2575FC);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
             Go to Login →
           </a>
           <p style="color:#9ca3af;font-size:12px;margin-top:28px">TutorHours · Student-Teacher Portal</p>
         </div>
       `,
-    });
+    })
 
     if (error) {
-      console.error("[sendApprovalMail] Resend Error:", error);
-      throw error;
+      console.error("[sendApprovalMail] Resend error:", error)
+      throw error
     }
-
-    console.log("[sendApprovalMail] ✅ sent via Resend, messageId:", data?.id);
+    console.log("[sendApprovalMail] ✅ sent, messageId:", data?.id)
   } catch (err) {
-    console.error("[sendApprovalMail] Catch block error:", err);
-    throw err;
+    console.error("[sendApprovalMail] failed:", err.message)
+    throw err
   }
-};
+}
 
 // ─── Password reset mail ───────────────────────────────────────────────────────
 export const sendPasswordResetMail = async (email, resetLink) => {
-  console.log("[sendPasswordResetMail] using Resend to:", email);
-
-  const resend = getResendClient();
+  console.log("[sendPasswordResetMail] sending to:", email)
+  const resend = getResendClient()
 
   try {
     const { data, error } = await resend.emails.send({
-      from: "TutorHours <onboarding@resend.dev>", // Resend's default testing domain
+      from: FROM_EMAIL,
       to: [email],
       subject: "Reset Your TutorHours Password",
       html: `
@@ -78,56 +78,48 @@ export const sendPasswordResetMail = async (email, resetLink) => {
           </p>
         </div>
       `,
-    });
+    })
 
     if (error) {
-      console.error("[sendPasswordResetMail] Resend Error:", error);
-      throw error;
+      console.error("[sendPasswordResetMail] Resend error:", error)
+      throw error
     }
-
-    console.log(
-      "[sendPasswordResetMail] ✅ sent via Resend, messageId:",
-      data?.id
-    );
+    console.log("[sendPasswordResetMail] ✅ sent, messageId:", data?.id)
   } catch (err) {
-    console.error("[sendPasswordResetMail] Catch block error:", err);
-    throw err;
-  } // Ensure this closing brace exists and properly closes the try/catch block
-};
+    console.error("[sendPasswordResetMail] failed:", err.message)
+    throw err
+  }
+}
+
 // ─── Profile pending-approval mail ────────────────────────────────────────────
 export const sendPendingApprovalMail = async (email, name, role = "user") => {
-  console.log("[sendPendingApprovalMail] sending to:", email, "| role:", role);
+  console.log("[sendPendingApprovalMail] sending to:", email, "| role:", role)
 
-  // Guard — silently skip if no API key configured
   if (!process.env.RESEND_API_KEY) {
-    console.warn("[sendPendingApprovalMail] RESEND_API_KEY not set – email skipped");
-    return;
+    console.warn("[sendPendingApprovalMail] RESEND_API_KEY not set – email skipped")
+    return
   }
 
-  const resend = getResendClient();
-  const roleLabel = role === "professor" ? "Tutor/Professor" : "Student";
-  const iconEmoji = role === "professor" ? "🎓" : "📚";
+  const resend = getResendClient()
+  const roleLabel = role === "professor" ? "Tutor/Professor" : "Student"
+  const iconEmoji = role === "professor" ? "🎓" : "📚"
   const nextStep =
     role === "professor"
       ? "Our admin team will review your credentials, teaching experience, and uploaded documents."
-      : "Our admin team will review your profile and learning details.";
+      : "Our admin team will review your profile and learning details."
 
   try {
     const { data, error } = await resend.emails.send({
-      from: "TutorHours <onboarding@resend.dev>",
+      from: FROM_EMAIL,
       to: [email],
       subject: "Profile Submitted — Pending Admin Approval | TutorHours",
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:auto;background:#f9f9fb;border-radius:14px;overflow:hidden">
-
-          <!-- Header -->
           <div style="background:linear-gradient(135deg,#6A11CB,#2575FC);padding:32px 28px;text-align:center">
             <p style="font-size:36px;margin:0">${iconEmoji}</p>
             <h1 style="color:#fff;font-size:22px;margin:10px 0 4px">Profile Submitted!</h1>
             <p style="color:rgba(255,255,255,0.75);font-size:14px;margin:0">TutorHours · ${roleLabel} Portal</p>
           </div>
-
-          <!-- Body -->
           <div style="padding:28px 28px 12px">
             <p style="font-size:16px;color:#1a0e33;margin:0 0 16px">
               Hello <strong>${name || "there"}</strong>,
@@ -141,29 +133,19 @@ export const sendPendingApprovalMail = async (email, name, role = "user") => {
               ${nextStep}
               Once approved, you will receive a confirmation email and will be able to access your full dashboard.
             </p>
-
-            <!-- Info box -->
             <div style="background:#eff6ff;border-left:4px solid #2575FC;border-radius:8px;padding:14px 16px;margin:20px 0">
               <p style="color:#1d4ed8;font-size:14px;font-weight:600;margin:0 0 6px">📋 What happens next?</p>
               <ul style="color:#374151;font-size:13px;margin:0;padding-left:18px;line-height:1.8">
                 <li>Our admin team will review your profile within <strong>1–2 business days</strong>.</li>
                 <li>You will receive an approval (or follow-up) email shortly after review.</li>
-                <li>If additional information is needed, our team will reach out to you directly.</li>
+                <li>If additional information is needed, our team will reach out directly.</li>
               </ul>
             </div>
-
-            <p style="color:#374151;line-height:1.7;margin:0 0 24px">
-              If you have any questions in the meantime, feel free to reply to this email or
-              reach out to our support team. We're happy to help!
-            </p>
-
             <a href="${(process.env.CLIENT_URL || "http://localhost:5173").replace(/\/$/, "")}/login"
                style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6A11CB,#2575FC);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
               Go to Login →
             </a>
           </div>
-
-          <!-- Footer -->
           <div style="padding:20px 28px;border-top:1px solid #e5e7eb;margin-top:20px">
             <p style="color:#9ca3af;font-size:12px;margin:0">
               TutorHours · Student-Teacher Portal<br/>
@@ -172,16 +154,15 @@ export const sendPendingApprovalMail = async (email, name, role = "user") => {
           </div>
         </div>
       `,
-    });
+    })
 
     if (error) {
-      console.error("[sendPendingApprovalMail] Resend error:", error);
-      return; // non-blocking — don't throw
+      console.error("[sendPendingApprovalMail] Resend error:", error)
+      return
     }
-
-    console.log("[sendPendingApprovalMail] ✅ sent, messageId:", data?.id);
+    console.log("[sendPendingApprovalMail] ✅ sent, messageId:", data?.id)
   } catch (err) {
-    console.error("[sendPendingApprovalMail] unexpected error:", err.message);
+    console.error("[sendPendingApprovalMail] unexpected error:", err.message)
     // intentionally swallowed — email failure must not break profile save
   }
-};
+}

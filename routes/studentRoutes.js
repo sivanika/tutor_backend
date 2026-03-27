@@ -9,6 +9,19 @@ const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 
 /* ============================
+   GET ALL STUDENTS FOR BROWSING
+============================ */
+router.get("/browse", protect, async (req, res) => {
+  try {
+    const students = await User.find({ role: "student" }).select("-password -availability");
+    res.json(students);
+  } catch (err) {
+    console.error("Fetch students error:", err);
+    res.status(500).json({ message: "Failed to fetch students" });
+  }
+});
+
+/* ============================
    COMPLETE STUDENT PROFILE
 ============================ */
 router.put(

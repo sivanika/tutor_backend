@@ -115,20 +115,24 @@ router.get("/:id", optionalProtect, async (req, res) => {
       const studentUser = await User.findById(req.user.id).populate("subscriptionPlan");
       if (studentUser) {
         const plan = studentUser.subscriptionPlan;
-        const hasViewed = studentUser.viewedProfessors.some(id => id.toString() === professor._id.toString());
-        
+        const hasViewed = studentUser.viewedProfessors.some(
+          (pid) => pid.toString() === professor._id.toString()
+        );
+
         if (!hasViewed) {
-          if (plan && plan.maxProfileViews !== null && studentUser.viewedProfessors.length >= plan.maxProfileViews) {
+          // Only enforce limit when the student has a plan WITH a configured maxProfileViews
+          if (
+            plan &&
+            plan.maxProfileViews !== null &&
+            studentUser.viewedProfessors.length >= plan.maxProfileViews
+          ) {
             return res.status(402).json({
               message: "LIMIT_REACHED",
-              detail: `You have reached your limit of viewing ${plan.maxProfileViews} professor profiles. Please upgrade your plan.`
-            });
-          } else if (!plan && studentUser.viewedProfessors.length >= 3) {
-            return res.status(402).json({
-              message: "LIMIT_REACHED",
-              detail: `Please subscribe to a plan to view more professor profiles.`
+              detail: `You have reached your limit of ${plan.maxProfileViews} professor profile views. Please upgrade your plan.`,
             });
           }
+
+          // Track this view (if no plan or plan has null limit, just track without blocking)
           studentUser.viewedProfessors.push(professor._id);
           await studentUser.save();
         }
