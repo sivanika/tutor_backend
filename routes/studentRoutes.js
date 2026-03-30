@@ -10,16 +10,74 @@ const upload = multer({ dest: "uploads/" });
 
 /* ============================
    GET ALL STUDENTS FOR BROWSING
+   Also returns the professor's current view count + tier for frontend gating
 ============================ */
 router.get("/browse", protect, async (req, res) => {
   try {
     const students = await User.find({ role: "student" }).select("-password -availability");
-    res.json(students);
+
+    // If the requester is a professor, attach their browse quota info
+    let professorQuota = null;
+    if (req.user && req.user.role === "professor") {
+      const prof = await User.findById(req.user.id).select("subscriptionTier viewedStudents subscriptionStatus subscriptionPlan").populate("subscriptionPlan");
+      if (prof) {
+        professorQuota = {
+          subscriptionTier: prof.subscriptionTier || "free_trial",
+          subscriptionStatus: prof.subscriptionStatus || "inactive",
+          viewedStudents: prof.viewedStudents || [],
+          planTier: prof.subscriptionPlan ? prof.subscriptionPlan.name : null
+        };
+      }
+    }
+
+    res.json({ students, professorQuota });
   } catch (err) {
     console.error("Fetch students error:", err);
     res.status(500).json({ message: "Failed to fetch students" });
   }
 });
+
+/* ============================
+   GET SINGLE STUDENT PROFILE (for professors)
+   Tracks professor view — limit gate is enforced on the frontend (browse area only)
+============================ */
+router.get("/:id", protect, async (req, res) => {
+  try {
+    const student = await User.findOne({
+      _id: req.params.id,
+      role: "student",
+    })
+      .select(
+        "name school gradeLevel learningGoals specializations bio parentConsent studentPhoto createdAt"
+      )
+      .lean();
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // Track this view for professors (no blocking — gate is frontend-only)
+    if (req.user && req.user.role === "professor") {
+      const profUser = await User.findById(req.user.id);
+      if (profUser) {
+        const hasViewed = (profUser.viewedStudents || []).some(
+          (sid) => sid.toString() === student._id.toString()
+        );
+        if (!hasViewed) {
+          if (!profUser.viewedStudents) profUser.viewedStudents = [];
+          profUser.viewedStudents.push(student._id);
+          await profUser.save();
+        }
+      }
+    }
+
+    res.json(student);
+  } catch (err) {
+    console.error("STUDENT PROFILE ERROR:", err);
+    res.status(500).json({ message: "Failed to load student profile" });
+  }
+});
+
 
 /* ============================
    COMPLETE STUDENT PROFILE

@@ -62,7 +62,8 @@ const userSchema = new mongoose.Schema({
   parentConsent: Boolean,
   subscriptionTier: { type: String, default: null }, // Legacy string identifier (free_trial, premium)
   subscriptionPlan: { type: mongoose.Schema.Types.ObjectId, ref: "SubscriptionPlan" }, // New dynamic plan reference
-  viewedProfessors: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Tracks unique profiles viewed
+  viewedProfessors: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Tracks unique profiles viewed (students → professors)
+  viewedStudents: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Tracks unique student profiles viewed (professors)
   currentPlanSessionsBooked: { type: Number, default: 0 }, // Tracks sessions booked in current cycle
 
   subscriptionStatus: {

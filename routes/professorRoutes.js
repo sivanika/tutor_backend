@@ -254,6 +254,10 @@ router.post(
       // 🔐 STATUS
       user.profileCompleted = true;
       user.isVerified = false; // Admin must verify
+      if (!user.subscriptionTier) {
+        user.subscriptionTier = "free_trial";
+        user.subscriptionStatus = "active";
+      }
 
       await user.save();
 
