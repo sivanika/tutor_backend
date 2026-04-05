@@ -12,6 +12,7 @@ mongoose.connect(process.env.MONGO_URI).then(async () => {
   
   // Insert new plans
   await SubscriptionPlan.insertMany([
+    // STUDENT PLANS
     {
       name: "Free Trial",
       description: "7-day free trial — 5 class bookings, 10 professor profile views",
@@ -21,7 +22,8 @@ mongoose.connect(process.env.MONGO_URI).then(async () => {
       maxSessions: 5,
       maxProfileViews: 10,
       priorityBooking: false,
-      isActive: true
+      isActive: true,
+      targetAudience: "student"
     },
     {
       name: "Basic",
@@ -32,7 +34,8 @@ mongoose.connect(process.env.MONGO_URI).then(async () => {
       maxSessions: 10,
       maxProfileViews: 20,
       priorityBooking: false,
-      isActive: true
+      isActive: true,
+      targetAudience: "student"
     },
     {
       name: "Premium",
@@ -43,7 +46,33 @@ mongoose.connect(process.env.MONGO_URI).then(async () => {
       maxSessions: null, // Unlimited
       maxProfileViews: 30,
       priorityBooking: true,
-      isActive: true
+      isActive: true,
+      targetAudience: "student"
+    },
+    // PROFESSOR PLANS
+    {
+      name: "Professor Standard",
+      description: "Extended student access, Enhanced dashboard",
+      price: 41900, // 419 INR
+      currency: "INR",
+      period: "monthly",
+      maxSessions: null,
+      maxProfileViews: 15,
+      priorityBooking: false,
+      isActive: true,
+      targetAudience: "professor"
+    },
+    {
+      name: "Professor Ultimate",
+      description: "Full dashboard access, Maximum student reach",
+      price: 109100, // 1091 INR
+      currency: "INR",
+      period: "monthly",
+      maxSessions: null,
+      maxProfileViews: 45,
+      priorityBooking: true,
+      isActive: true,
+      targetAudience: "professor"
     }
   ])
   

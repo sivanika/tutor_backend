@@ -6,6 +6,7 @@ const subscriptionPlanSchema = new mongoose.Schema({
   price: { type: Number, required: true }, // price in smallest currency unit (e.g., paise)
   currency: { type: String, default: "INR" },
   period: { type: String, default: "monthly" },
+  targetAudience: { type: String, enum: ["student", "professor", "all"], default: "student" },
   
   // Feature Limits
   maxSessions: { 

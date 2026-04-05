@@ -18,6 +18,7 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+import studentSubjectRoutes from "./routes/studentSubjectRoutes.js";
 import socketHandler from "./socketHandler.js";
 import path from "path";
 // connect to database
@@ -65,6 +66,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/student-subjects", studentSubjectRoutes);
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 // ✅ CREATE HTTP SERVER FIRST
 const server = http.createServer(app)

@@ -8,13 +8,47 @@ import { sendPendingApprovalMail } from "../utils/sendEmail.js";
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 
+import StudentSubject from "../models/StudentSubject.js";
+
 /* ============================
    GET ALL STUDENTS FOR BROWSING
    Also returns the professor's current view count + tier for frontend gating
 ============================ */
 router.get("/browse", protect, async (req, res) => {
   try {
-    const students = await User.find({ role: "student" }).select("-password -availability");
+    // 🔍 Aggregate students with their visible subject requests
+    const students = await User.aggregate([
+      { $match: { role: "student" } },
+      { $project: { password: 0, availability: 0 } },
+      {
+        $lookup: {
+          from: "studentsubjects", // mongoose pluralizes automatically: StudentSubject -> studentsubjects
+          let: { studentId: "$_id" },
+          pipeline: [
+            { 
+              $match: { 
+                $expr: { $eq: ["$student", "$$studentId"] },
+                visible: true,
+                status: { $in: ["Open", "Pending", "Engaged"] }
+              } 
+            },
+            {
+              $addFields: {
+                hasApplied: {
+                  $cond: {
+                    if: { $in: [req.user._id, { $ifNull: ["$requests.professor", []] }] },
+                    then: true,
+                    else: false
+                  }
+                }
+              }
+            },
+            { $project: { name: 1, requirement: 1, status: 1, icon: 1, hasApplied: 1 } }
+          ],
+          as: "subjectRequests"
+        }
+      }
+    ]);
 
     // If the requester is a professor, attach their browse quota info
     let professorQuota = null;
