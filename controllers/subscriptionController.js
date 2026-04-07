@@ -32,7 +32,7 @@ export const getAllPlans = async (req, res) => {
 // @access  Private/Admin
 export const createPlan = async (req, res) => {
   try {
-    const { name, description, price, currency, period, maxSessions, maxProfileViews, priorityBooking, isActive } = req.body
+    const { name, description, price, currency, period, maxSessions, maxProfileViews, priorityBooking, isActive, targetAudience } = req.body
 
     const plan = await SubscriptionPlan.create({
       name,
@@ -43,7 +43,8 @@ export const createPlan = async (req, res) => {
       maxSessions,
       maxProfileViews,
       priorityBooking,
-      isActive
+      isActive,
+      targetAudience
     })
 
     res.status(201).json(plan)

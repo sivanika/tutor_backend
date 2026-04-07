@@ -32,14 +32,17 @@ export default function socketHandler(io) {
 
     /* ── Register personal room (called from dashboard on login) ── */
     socket.on("joinUser", ({ userId }) => {
-      if (!userId) return
-      const uid = String(userId)
-      socket.join(uid)
-      if (!online.has(uid)) online.set(uid, new Set())
-      online.get(uid).add(socket.id)
-      io.emit("userOnline", { userId: uid })
-      console.log(`✅ joinUser uid=${uid} socket=${socket.id}`)
-    })
+      if (!userId) {
+        console.warn("⚠️ joinUser called without userId");
+        return;
+      }
+      const uid = String(userId);
+      socket.join(uid);
+      if (!online.has(uid)) online.set(uid, new Set());
+      online.get(uid).add(socket.id);
+      io.emit("userOnline", { userId: uid });
+      console.log(`✅ joinUser connected: socket=${socket.id} userRoom=${uid}`);
+    });
 
     /* ── Typing indicators (simple broadcast to other user) ──── */
     socket.on("typing", ({ conversationId, receiverId }) => {
@@ -62,6 +65,32 @@ export default function socketHandler(io) {
         if (senderId) io.to(String(senderId)).emit("messagesRead", { conversationId })
       } catch (e) {
         console.error("markRead err:", e)
+      }
+    })
+
+    /* ── Session Chat (Legacy/Specific) ───────────────────────── */
+    socket.on("joinSession", ({ sessionId }) => {
+      if (!sessionId) return
+      socket.join(`session-${sessionId}`)
+      console.log(`📡 socket ${socket.id} joined session room: session-${sessionId}`)
+    })
+
+    socket.on("sendMessage", async ({ sessionId, userId, text }) => {
+      try {
+        if (!text?.trim() || !sessionId) return
+        
+        // Broadcast to session room
+        const payload = {
+          text: text.trim(),
+          sender: userId,
+          createdAt: new Date(),
+          sessionId
+        }
+        
+        io.to(`session-${sessionId}`).emit("newMessage", payload)
+        console.log(`📩 session-${sessionId} message from ${userId}: ${text}`)
+      } catch (e) {
+        console.error("sendMessage err:", e)
       }
     })
 
