@@ -123,17 +123,19 @@ export const forgotPassword = async (req, res) => {
     const baseUrl = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/$/, "");
     const resetLink = `${baseUrl}/reset-password/${rawToken}`;
 
-    // 4️⃣  Send email — if it fails, roll back the token
     try {
       await sendPasswordResetMail(user.email, resetLink);
     } catch (emailError) {
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
       await user.save({ validateBeforeSave: false });
-      console.error("Email failed — token cleared:", emailError.message);
+      
+      console.error("❌ Email failed — token cleared:", emailError.message);
+      
       return res.status(500).json({
-        message: "Email configuration error on the server. Please check Render environment variables (EMAIL_USER, EMAIL_PASS) or use a Gmail App Password.",
-        errorDetail: emailError.message
+        message: "Email sending failed. " + (emailError.message || "Please check your server configuration."),
+        errorDetail: emailError.message,
+        suggestion: "Ensure your Resend API key is valid and your sender email is verified in the Resend dashboard."
       });
     }
 

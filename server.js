@@ -3,6 +3,7 @@ import express from "express"
 import http from "http"
 import { Server } from "socket.io"
 import cors from "cors"
+import { Resend } from "resend";
 import connectDB from "./config/db.js"
 import adminRoutes from "./routes/adminRoutes.js"
 // routes
@@ -43,8 +44,6 @@ app.use(cors({
       callback(null, true);
     } else {
       console.error("CORS blocked request from origin:", origin);
-      // Passing an error to callback triggers Express 500 error, so we just reject it.
-      // Many recommend callback(new Error(...)) but we just want a standard CORS rejection
       callback(new Error(`Not allowed by CORS: ${origin}`));
     }
   },
@@ -68,6 +67,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/student-subjects", studentSubjectRoutes);
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
 // ✅ CREATE HTTP SERVER FIRST
 const server = http.createServer(app)
 
@@ -84,10 +84,6 @@ const io = new Server(server, {
 global.io = io;
 
 socketHandler(io);
-
-// Make io accessible in Express route controllers
-global.io = io;
-
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () =>
