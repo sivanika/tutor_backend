@@ -32,7 +32,7 @@ export const createOrder = async (req, res) => {
         const options = {
             amount: selectedPlan.price, // already in paise in DB
             currency: selectedPlan.currency || "INR",
-            receipt: `receipt_${selectedPlan._id}_${Date.now()}`,
+            receipt: `rcpt_${Date.now()}`,
             notes: {
                 planId: String(selectedPlan._id),
                 userId: req.user.id,
@@ -111,6 +111,15 @@ export const verifyPayment = async (req, res) => {
         );
 
         if (!user) return res.status(404).json({ message: "User not found" });
+
+        // ✅ REALTIME: Notify via sockets
+        if (global.io) {
+            global.io.to(String(user._id)).emit("payment_verified", {
+                success: true,
+                planName: selectedPlan.name,
+                paymentId: razorpay_payment_id
+            });
+        }
 
         res.json({
             success: true,
@@ -235,5 +244,86 @@ export const getSubscription = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ message: "Failed to get subscription" });
+    }
+};
+// ─── Razorpay Webhook ────────────────────────────────────────────────────────
+export const razorpayWebhook = async (req, res) => {
+    try {
+        const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+        if (!secret) {
+            console.error("⚠️ RAZORPAY_WEBHOOK_SECRET missing in .env");
+            return res.status(500).json({ message: "Server misconfigured" });
+        }
+
+        const signature = req.headers["x-razorpay-signature"];
+        const expectedSignature = crypto
+            .createHmac("sha256", secret)
+            .update(JSON.stringify(req.body))
+            .digest("hex");
+
+        if (signature !== expectedSignature) {
+            console.warn("❌ Webhook signature mismatch");
+            return res.status(400).send("Invalid signature");
+        }
+
+        const event = req.body.event;
+        console.log(`🔔 Razorpay Webhook received: ${event}`);
+
+        if (event === "payment.captured" || event === "order.paid") {
+            const payment = req.body.payload.payment.entity;
+            const orderId = payment.order_id;
+            const userId = payment.notes.userId;
+            const planId = payment.notes.planId;
+
+            if (!userId || !planId) {
+                console.warn("⚠️ Webhook missing userId or planId in notes");
+                return res.json({ status: "ok" });
+            }
+
+            const selectedPlan = await SubscriptionPlan.findById(planId);
+            if (!selectedPlan) return res.json({ status: "ok" });
+
+            const expiry = new Date();
+            if (selectedPlan.period && selectedPlan.period.includes("month")) {
+                expiry.setMonth(expiry.getMonth() + 1);
+            } else if (selectedPlan.period && selectedPlan.period.includes("day")) {
+                const days = parseInt(selectedPlan.period) || 30;
+                expiry.setDate(expiry.getDate() + days);
+            } else {
+                expiry.setMonth(expiry.getMonth() + 1);
+            }
+
+            const updateData = {
+                subscriptionPlan: selectedPlan._id,
+                subscriptionTier: selectedPlan.name,
+                subscriptionStatus: "active",
+                subscriptionStartDate: new Date(),
+                subscriptionExpiryDate: expiry,
+                razorpayPaymentId: payment.id,
+                razorpayOrderId: orderId,
+                currentPlanSessionsBooked: 0,
+                viewedProfessors: [],
+            };
+
+            const user = await User.findByIdAndUpdate(
+                userId,
+                { $set: updateData },
+                { new: true }
+            );
+
+            if (user && global.io) {
+                global.io.to(String(user._id)).emit("payment_verified", {
+                    success: true,
+                    planName: selectedPlan.name,
+                    paymentId: payment.id,
+                    fromWebhook: true
+                });
+            }
+        }
+
+        res.json({ status: "ok" });
+    } catch (error) {
+        console.error("Webhook error:", error);
+        res.status(500).json({ message: "Webhook processing failed" });
     }
 };

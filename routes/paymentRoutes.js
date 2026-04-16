@@ -6,6 +6,7 @@ import {
     activateFreePlan,
     activateProfessorListing,
     getSubscription,
+    razorpayWebhook,
 } from "../controllers/paymentController.js";
 
 const router = express.Router();
@@ -24,5 +25,8 @@ router.post("/activate-professor", protect, activateProfessorListing);
 
 // Get current user subscription info
 router.get("/subscription", protect, getSubscription);
+
+// Razorpay Webhook (No protect middleware!)
+router.post("/webhook", razorpayWebhook);
 
 export default router;

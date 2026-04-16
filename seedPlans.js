@@ -1,84 +1,102 @@
-import mongoose from "mongoose"
-import dotenv from "dotenv"
-import SubscriptionPlan from "./models/SubscriptionPlan.js"
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import SubscriptionPlan from "./models/SubscriptionPlan.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
-dotenv.config()
+// Load env
+dotenv.config();
 
-mongoose.connect(process.env.MONGO_URI).then(async () => {
-  console.log("Connected to DB, seeding plans...")
-  
-  // Clear existing
-  await SubscriptionPlan.deleteMany({})
-  
-  // Insert new plans
-  await SubscriptionPlan.insertMany([
-    // STUDENT PLANS
+const plans = [
+    // ── STUDENT PLANS ────────────────────────────────────────────────────────
     {
-      name: "Free Trial",
-      description: "7-day free trial — 5 class bookings, 10 professor profile views",
-      price: 0,
-      currency: "INR",
-      period: "7 days",
-      maxSessions: 5,
-      maxProfileViews: 10,
-      priorityBooking: false,
-      isActive: true,
-      targetAudience: "student"
+        name: "Basic Student",
+        description: "Perfect for getting started",
+        price: 0,
+        currency: "INR",
+        period: "monthly",
+        targetAudience: "student",
+        maxSessions: 2,
+        maxProfileViews: 5,
+        priorityBooking: false,
+        isActive: true
     },
     {
-      name: "Basic",
-      description: "Basic plan — view up to 20 profiles, book up to 10 sessions",
-      price: 9900, // 99 INR
-      currency: "INR",
-      period: "monthly",
-      maxSessions: 10,
-      maxProfileViews: 20,
-      priorityBooking: false,
-      isActive: true,
-      targetAudience: "student"
+        name: "Premium Student",
+        description: "More sessions and faster bookings",
+        price: 9900, // ₹99 in paise
+        currency: "INR",
+        period: "monthly",
+        targetAudience: "student",
+        maxSessions: 10,
+        maxProfileViews: 30,
+        priorityBooking: true,
+        isActive: true
     },
     {
-      name: "Premium",
-      description: "Unlimited sessions, view up to 30 profiles, priority booking",
-      price: 49900, // 499 INR
-      currency: "INR",
-      period: "monthly",
-      maxSessions: null, // Unlimited
-      maxProfileViews: 30,
-      priorityBooking: true,
-      isActive: true,
-      targetAudience: "student"
+        name: "Pro Premium Student",
+        description: "Unlimited learning and profile access",
+        price: 49900, // ₹499 in paise
+        currency: "INR",
+        period: "monthly",
+        targetAudience: "student",
+        maxSessions: null, // Unlimited
+        maxProfileViews: null, // Unlimited
+        priorityBooking: true,
+        isActive: true
     },
-    // PROFESSOR PLANS
+    // ── PROFESSOR PLANS ──────────────────────────────────────────────────────
     {
-      name: "Professor Standard",
-      description: "Extended student access, Enhanced dashboard",
-      price: 41900, // 419 INR
-      currency: "INR",
-      period: "monthly",
-      maxSessions: null,
-      maxProfileViews: 15,
-      priorityBooking: false,
-      isActive: true,
-      targetAudience: "professor"
+        name: "Basic Professor",
+        description: "Essential listing for tutors",
+        price: 49900, // ₹499 in paise
+        currency: "INR",
+        period: "monthly",
+        targetAudience: "professor",
+        isActive: true
     },
     {
-      name: "Professor Ultimate",
-      description: "Full dashboard access, Maximum student reach",
-      price: 109100, // 1091 INR
-      currency: "INR",
-      period: "monthly",
-      maxSessions: null,
-      maxProfileViews: 45,
-      priorityBooking: true,
-      isActive: true,
-      targetAudience: "professor"
+        name: "Premium Professor",
+        description: "Featured listing and advanced tools",
+        price: 99900, // ₹999 in paise
+        currency: "INR",
+        period: "monthly",
+        targetAudience: "professor",
+        isActive: true
+    },
+    {
+        name: "All Access",
+        description: "Yearly membership with maximum visibility",
+        price: 199900, // ₹1999 in paise
+        currency: "INR",
+        period: "yearly",
+        targetAudience: "professor",
+        isActive: true
     }
-  ])
-  
-  console.log("Seed complete!")
-  process.exit(0)
-}).catch(err => {
-  console.error("DB connection error", err)
-  process.exit(1)
-})
+];
+
+const seedDB = async () => {
+    try {
+        if (!process.env.MONGO_URI) {
+            throw new Error("MONGO_URI is not defined in .env");
+        }
+
+        await mongoose.connect(process.env.MONGO_URI);
+        console.log("Connected to MongoDB...");
+
+        // Clear existing plans
+        await SubscriptionPlan.deleteMany({});
+        console.log("Cleared existing subscription plans.");
+
+        // Insert new plans
+        await SubscriptionPlan.insertMany(plans);
+        console.log("Custom subscription plans seeded successfully!");
+
+        mongoose.connection.close();
+    } catch (error) {
+        console.error("Seeding failed:", error);
+        process.exit(1);
+    }
+};
+
+seedDB();
