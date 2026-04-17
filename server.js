@@ -4,6 +4,7 @@ import http from "http"
 import { Server } from "socket.io"
 import cors from "cors"
 import { Resend } from "resend";
+import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js"
 import adminRoutes from "./routes/adminRoutes.js"
 // routes
@@ -27,9 +28,28 @@ connectDB()
 
 const app = express()
 
+import helmet from "helmet"
+import rateLimit from "express-rate-limit"
+
+app.use(helmet())
+
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // limit each IP to 200 requests per windowMs
+})
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10, // limit each IP to 10 login/register requests
+  message: { message: "Too many attempts. Try again later." },
+})
+
+app.use(generalLimiter)
+
 const allowedOrigins = [
   "http://localhost:5173",
   "https://tutor-frontend-steel.vercel.app",
+  "https://tutor-frontend-ten.vercel.app",
   process.env.CLIENT_URL
 ].filter(Boolean);
 
@@ -38,7 +58,7 @@ app.use(cors({
     // allow requests with no origin (like mobile apps, curl)
     if (!origin) return callback(null, true);
 
-    const isAllowed = allowedOrigins.includes(origin) || origin.endsWith(".vercel.app");
+    const isAllowed = allowedOrigins.includes(origin);
 
     if (isAllowed) {
       callback(null, true);
@@ -50,8 +70,11 @@ app.use(cors({
   credentials: true,
 }))
 app.use(express.json())
+app.use(cookieParser())
 
 // routes
+app.use("/api/auth/login", authLimiter)
+app.use("/api/auth/register", authLimiter)
 app.use("/api/auth", authRoutes)
 app.use("/api/admin", adminRoutes)
 app.use("/api/sessions", sessionRoutes)

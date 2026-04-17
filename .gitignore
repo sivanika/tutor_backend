@@ -1,0 +1,18 @@
+# ── Environment secrets — NEVER commit these ──
+.env
+.env.*
+.env.local
+.env.production
+.env.staging
+.env.development
+
+# ── Dependencies ──
+node_modules/
+
+# ── Uploads ──
+uploads/*
+!uploads/.gitkeep
+
+# ── Logs ──
+*.log
+npm-debug.log*

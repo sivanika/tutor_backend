@@ -36,8 +36,14 @@ export const registerUser = async (req, res) => {
 
     const token = generateToken(user._id, user.role);
 
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, 
+    });
+
     res.status(201).json({
-      token,
       user: {
         id: user._id,
         name: user.name,
@@ -62,18 +68,24 @@ export const loginUser = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: "User not found" });
+      return res.status(400).json({ message: "Invalid email or password" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Invalid email or password" });
     }
 
     const token = generateToken(user._id, user.role);
 
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, 
+    });
+
     res.json({
-      token,
       user: {
         id: user._id,
         email: user.email,
@@ -187,6 +199,37 @@ export const resetPassword = async (req, res) => {
   } catch (error) {
     console.error("Reset password error:", error.message);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ================= LOGOUT =================
+export const logoutUser = (req, res) => {
+  res.cookie("token", "", {
+    httpOnly: true,
+    expires: new Date(0),
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+  res.json({ message: "Logged out successfully" });
+};
+
+// ================= GET ME =================
+export const getMe = async (req, res) => {
+  try {
+    res.json({
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        role: req.user.role,
+        profileCompleted: req.user.profileCompleted,
+        isVerified: req.user.isVerified,
+        subscriptionStatus: req.user.subscriptionStatus,
+        subscriptionTier: req.user.subscriptionTier,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error fetching user" });
   }
 };
 
