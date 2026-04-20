@@ -6,7 +6,18 @@ import User from "../models/User.js"
 // @access  Public (or protected)
 export const getActivePlans = async (req, res) => {
   try {
-    const plans = await SubscriptionPlan.find({ isActive: true }).sort({ price: 1 })
+    const { targetAudience } = req.query
+    const query = { isActive: true }
+
+    if (targetAudience) {
+      // If filtering, include plans for specific audience OR plans for "all"
+      query.$or = [
+        { targetAudience: targetAudience },
+        { targetAudience: "all" }
+      ]
+    }
+
+    const plans = await SubscriptionPlan.find(query).sort({ price: 1 })
     res.json(plans)
   } catch (err) {
     console.error("GET ACTIVE PLANS ERROR:", err)
