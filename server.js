@@ -46,25 +46,32 @@ const authLimiter = rateLimit({
 
 app.use(generalLimiter)
 
-const allowedOrigins = [
+const rawOrigins = [
   "http://localhost:5173",
   "https://tutor-frontend-steel.vercel.app",
   "https://tutor-frontend-ten.vercel.app",
+  "https://tutorhours.com",
+  "https://www.tutorhours.com",
   process.env.CLIENT_URL
 ].filter(Boolean);
+
+// Clean origins: remove trailing slashes for robust matching
+const allowedOrigins = rawOrigins.map(url => url.replace(/\/$/, ""));
 
 app.use(cors({
   origin: (origin, callback) => {
     // allow requests with no origin (like mobile apps, curl)
     if (!origin) return callback(null, true);
 
-    const isAllowed = allowedOrigins.includes(origin);
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    const isAllowed = allowedOrigins.includes(normalizedOrigin);
 
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.error("CORS blocked request from origin:", origin);
-      callback(new Error(`Not allowed by CORS: ${origin}`));
+      console.warn("CORS blocked request from origin:", origin);
+      // Return false instead of Error to avoid crashing the server/middleware stack
+      callback(null, false);
     }
   },
   credentials: true,
@@ -107,6 +114,16 @@ const io = new Server(server, {
 global.io = io;
 
 socketHandler(io);
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error("❌ GLOBAL ERROR:", err.stack);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+    ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
+  });
+});
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () =>
