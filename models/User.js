@@ -92,6 +92,7 @@ const userSchema = new mongoose.Schema({
   // ── Password reset (stores SHA256 hash, never plaintext) ──
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  googleId: String,
 
 }, { timestamps: true });
 

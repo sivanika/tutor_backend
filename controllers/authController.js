@@ -1,8 +1,11 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.js";
 import { sendApprovalMail, sendPasswordResetMail } from "../utils/sendEmail.js";
+
+const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
 
 // Generate JWT
 const generateToken = (id, role) => {
@@ -233,3 +236,57 @@ export const getMe = async (req, res) => {
   }
 };
 
+// ================= GOOGLE LOGIN =================
+export const googleLogin = async (req, res) => {
+  try {
+    const { idToken, role } = req.body;
+
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.VITE_GOOGLE_CLIENT_ID,
+    });
+
+    const { email, name, picture } = ticket.getPayload();
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      if (!role) {
+        return res.status(400).json({ message: "Role is required for new users" });
+      }
+      user = await User.create({
+        name,
+        email,
+        role,
+        isVerified: true, // Google verified emails are trusted
+        profileCompleted: false,
+        googleId: ticket.getUserId(),
+      });
+    }
+
+    const token = generateToken(user._id, user.role);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true, 
+      sameSite: "none", 
+      maxAge: 7 * 24 * 60 * 60 * 1000, 
+    });
+
+    res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isVerified: user.isVerified,
+        profileCompleted: user.profileCompleted,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionTier: user.subscriptionTier,
+      },
+    });
+  } catch (error) {
+    console.error("Google login error:", error.message);
+    res.status(500).json({ message: "Google login failed" });
+  }
+};
