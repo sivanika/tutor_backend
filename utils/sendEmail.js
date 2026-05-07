@@ -25,7 +25,7 @@ const resend = getResendClient();
 // ─────────────────────────────────────────────
 // ✅ GENERIC EMAIL SENDER (Reusable)
 // ─────────────────────────────────────────────
-const send = async ({ to, subject, html }) => {
+export const send = async ({ to, subject, html }) => {
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,

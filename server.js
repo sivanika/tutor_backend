@@ -23,6 +23,7 @@ import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import studentSubjectRoutes from "./routes/studentSubjectRoutes.js";
 import socketHandler from "./socketHandler.js";
 import path from "path";
+import { send } from "./utils/sendEmail.js";
 // connect to database
 connectDB()
 
@@ -109,6 +110,17 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), {
     }
   }
 }));
+ 
+ app.post("/send-email", async (req, res) => {
+   const { to, subject, message } = req.body;
+   try {
+     await send({ to, subject, html: message });
+     res.json({ success: true, message: "Email sent successfully" });
+   } catch (error) {
+     console.error("Email send error:", error);
+     res.status(500).json({ success: false, message: "Failed to send email" });
+   }
+ });
 
 // ✅ CREATE HTTP SERVER FIRST
 const server = http.createServer(app)
