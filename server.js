@@ -31,7 +31,13 @@ const app = express()
 import helmet from "helmet"
 import rateLimit from "express-rate-limit"
 
-app.use(helmet())
+app.use(
+  helmet({
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: false, // Disabling CSP for now to ensure all external scripts (Razorpay, Google) work smoothly
+  })
+)
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -96,7 +102,13 @@ app.use("/api/announcements", announcementRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/student-subjects", studentSubjectRoutes);
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), {
+  setHeaders: (res, path, stat) => {
+    if (!path.includes('.')) {
+      res.set('Content-Type', 'image/jpeg');
+    }
+  }
+}));
 
 // ✅ CREATE HTTP SERVER FIRST
 const server = http.createServer(app)

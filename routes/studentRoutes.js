@@ -179,10 +179,10 @@ router.put(
 
       // File uploads
       if (req.files?.studentPhoto) {
-        user.studentPhoto = req.files.studentPhoto[0].path;
+        user.studentPhoto = req.files.studentPhoto[0].path.replace(/\\/g, "/");
       }
       if (req.files?.studentDocument) {
-        user.studentDocument = req.files.studentDocument[0].path;
+        user.studentDocument = req.files.studentDocument[0].path.replace(/\\/g, "/");
       }
 
       // 🔥 CRITICAL FIX

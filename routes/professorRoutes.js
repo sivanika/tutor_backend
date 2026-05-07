@@ -234,21 +234,21 @@ router.post(
         }
       }
 
-      // 📂 FILES
+      // 📂 FILES — normalize to forward slashes for URL compatibility (Windows multer returns backslashes)
       if (req.files?.profilePhoto) {
-        user.profilePhoto = req.files.profilePhoto[0].path;
+        user.profilePhoto = req.files.profilePhoto[0].path.replace(/\\/g, "/");
       }
 
       if (req.files?.degreeCertificate) {
-        user.degreeCertificate = req.files.degreeCertificate[0].path;
+        user.degreeCertificate = req.files.degreeCertificate[0].path.replace(/\\/g, "/");
       }
 
       if (req.files?.governmentId) {
-        user.governmentId = req.files.governmentId[0].path;
+        user.governmentId = req.files.governmentId[0].path.replace(/\\/g, "/");
       }
 
       if (req.files?.videoIntroduction) {
-        user.videoIntroduction = req.files.videoIntroduction[0].path;
+        user.videoIntroduction = req.files.videoIntroduction[0].path.replace(/\\/g, "/");
       }
 
       // 🔐 STATUS
