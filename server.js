@@ -28,6 +28,7 @@ import { send } from "./utils/sendEmail.js";
 connectDB()
 
 const app = express()
+app.set("trust proxy", 1) // Required for express-rate-limit to work correctly on Render/Proxies
 
 import helmet from "helmet"
 import rateLimit from "express-rate-limit"
