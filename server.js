@@ -35,6 +35,7 @@ import rateLimit from "express-rate-limit"
 
 app.use(
   helmet({
+    crossOriginResourcePolicy: false,
     crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: false, // Disabling CSP for now to ensure all external scripts (Razorpay, Google) work smoothly
