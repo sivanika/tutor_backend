@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 // ✅ Use verified domain in production
 const FROM_EMAIL =
-  process.env.FROM_EMAIL || "TutorHours <onboarding@resend.dev>";
+  process.env.FROM_EMAIL || "VishidhAcademy <onboarding@resend.dev>";
 
 // ✅ Base URL (no repeating logic)
 const BASE_URL = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/$/, "");
@@ -53,12 +53,12 @@ export const send = async ({ to, subject, html }) => {
 export const sendApprovalMail = (email, name) => {
   return send({
     to: email,
-    subject: "Profile Approved — TutorHours",
+    subject: "Profile Approved — VishidhAcademy",
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px;border-radius:12px;background:#f9f9fb">
         <h2 style="color:#6A11CB;">Profile Approved! 🎉</h2>
         <p>Hello <strong>${name}</strong>,</p>
-        <p>Your profile has been approved. You can now log in and start using TutorHours.</p>
+        <p>Your profile has been approved. You can now log in and start using VishidhAcademy.</p>
 
         <a href="${BASE_URL}/login"
           style="display:inline-block;margin-top:20px;padding:12px 28px;background:linear-gradient(135deg,#6A11CB,#2575FC);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;">
@@ -66,7 +66,7 @@ export const sendApprovalMail = (email, name) => {
         </a>
 
         <p style="color:#9ca3af;font-size:12px;margin-top:28px">
-          TutorHours · Student-Teacher Portal
+          VishidhAcademy · Student-Teacher Portal
         </p>
       </div>
     `,
@@ -79,7 +79,7 @@ export const sendApprovalMail = (email, name) => {
 export const sendPasswordResetMail = (email, resetLink) => {
   return send({
     to: email,
-    subject: "Reset Your TutorHours Password",
+    subject: "Reset Your VishidhAcademy Password",
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px;border-radius:12px;background:#f9f9fb">
         <h2 style="color:#6A11CB;">Password Reset 🔐</h2>
@@ -143,7 +143,7 @@ export const sendPendingApprovalMail = async (email, name, role = "user") => {
           </div>
 
           <p style="text-align:center;font-size:12px;color:#aaa;padding-bottom:20px">
-            TutorHours Platform
+            VishidhAcademy Platform
           </p>
 
         </div>

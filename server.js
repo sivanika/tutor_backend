@@ -59,8 +59,8 @@ const rawOrigins = [
   "http://localhost:5173",
   "https://tutor-frontend-steel.vercel.app",
   "https://tutor-frontend-ten.vercel.app",
-  "https://tutorhours.com",
-  "https://www.tutorhours.com",
+  "https://vishidhacademy.com",
+  "https://www.vishidhacademy.com",
   process.env.CLIENT_URL
 ].filter(Boolean);
 
