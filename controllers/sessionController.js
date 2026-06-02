@@ -2,6 +2,8 @@ import Session from "../models/Session.js"
 import User from "../models/User.js"
 import Notification from "../models/Notification.js"
 import { emitNotification } from "../socketHandler.js"
+import StudentSubject from "../models/StudentSubject.js"
+import Conversation from "../models/Conversation.js"
 
 // CREATE SESSION (Professor only)
 export const createSession = async (req, res) => {
@@ -176,6 +178,54 @@ export const cancelEnrollment = async (req, res) => {
 // PROFESSOR SESSIONS
 export const getProfessorSessions = async (req, res) => {
   try {
+    // Sync/heal any Engaged StudentSubjects for which no session exists
+    const engagedSubjects = await StudentSubject.find({
+      status: "Engaged",
+      "requests.status": "accepted",
+      "requests.professor": req.user.id
+    });
+
+    for (const subj of engagedSubjects) {
+      const acceptedReq = subj.requests.find(r => r.status === "accepted" && r.professor.toString() === req.user.id);
+      if (acceptedReq) {
+        // Create session if it doesn't exist
+        const sessionExists = await Session.findOne({
+          title: `Tutoring: ${subj.name}`,
+          professor: req.user.id,
+          "students.student": subj.student
+        });
+        if (!sessionExists) {
+          await Session.create({
+            title: `Tutoring: ${subj.name}`,
+            level: "TBD",
+            date: "TBD",
+            time: subj.requirement?.time || "TBD",
+            meetLink: "TBD",
+            professor: req.user.id,
+            students: [{
+              student: subj.student,
+              status: "enrolled"
+            }]
+          });
+        }
+
+        // Create conversation if it doesn't exist
+        const convExists = await Conversation.findOne({
+          participants: { $all: [subj.student, req.user.id] }
+        });
+        if (!convExists) {
+          await Conversation.create({
+            participants: [subj.student, req.user.id],
+            lastMessage: {
+              text: `System: You are now connected for tutoring on ${subj.name}!`,
+              sender: subj.student,
+              createdAt: new Date()
+            }
+          });
+        }
+      }
+    }
+
     const sessions = await Session.find({
       professor: req.user.id,
     }).populate("students.student", "name email")
@@ -191,6 +241,54 @@ export const getProfessorSessions = async (req, res) => {
 // GET STUDENT ENROLLED SESSIONS
 export const getEnrolledSessions = async (req, res) => {
   try {
+    // Sync/heal any Engaged StudentSubjects for which no session exists
+    const engagedSubjects = await StudentSubject.find({
+      status: "Engaged",
+      student: req.user.id,
+      "requests.status": "accepted"
+    });
+
+    for (const subj of engagedSubjects) {
+      const acceptedReq = subj.requests.find(r => r.status === "accepted");
+      if (acceptedReq) {
+        // Create session if it doesn't exist
+        const sessionExists = await Session.findOne({
+          title: `Tutoring: ${subj.name}`,
+          professor: acceptedReq.professor,
+          "students.student": req.user.id
+        });
+        if (!sessionExists) {
+          await Session.create({
+            title: `Tutoring: ${subj.name}`,
+            level: "TBD",
+            date: "TBD",
+            time: subj.requirement?.time || "TBD",
+            meetLink: "TBD",
+            professor: acceptedReq.professor,
+            students: [{
+              student: req.user.id,
+              status: "enrolled"
+            }]
+          });
+        }
+
+        // Create conversation if it doesn't exist
+        const convExists = await Conversation.findOne({
+          participants: { $all: [req.user.id, acceptedReq.professor] }
+        });
+        if (!convExists) {
+          await Conversation.create({
+            participants: [req.user.id, acceptedReq.professor],
+            lastMessage: {
+              text: `System: You are now connected for tutoring on ${subj.name}!`,
+              sender: req.user.id,
+              createdAt: new Date()
+            }
+          });
+        }
+      }
+    }
+
     const sessions = await Session.find({
       "students.student": req.user.id,
     }).populate("professor", "name email")

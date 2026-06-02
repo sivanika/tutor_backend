@@ -1,5 +1,7 @@
 import StudentSubject from "../models/StudentSubject.js";
 import User from "../models/User.js";
+import Session from "../models/Session.js";
+import Conversation from "../models/Conversation.js";
 
 // GET /api/student-subjects
 export const getStudentSubjects = async (req, res) => {
@@ -105,11 +107,34 @@ export const acceptProfessorRequest = async (req, res) => {
       if (req.status === "pending") req.status = "rejected";
     });
 
-    // Update subject status
     subject.status = "Engaged";
     subject.visible = false;
 
     await subject.save();
+
+    // Create a Session automatically so they appear in each other's dashboards
+    const newSession = await Session.create({
+      title: `Tutoring: ${subject.name}`,
+      level: "TBD",
+      date: "TBD",
+      time: subject.requirement?.time || "TBD",
+      meetLink: "TBD",
+      professor: request.professor,
+      students: [{
+        student: req.user._id,
+        status: "enrolled"
+      }]
+    });
+
+    // Create a Conversation automatically for chat
+    await Conversation.create({
+      participants: [req.user._id, request.professor],
+      lastMessage: {
+        text: `System: You are now connected for tutoring on ${subject.name}!`,
+        sender: req.user._id,
+        createdAt: new Date()
+      }
+    });
 
     // Socket notification could go here
     if (global.io) {
