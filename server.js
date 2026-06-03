@@ -21,6 +21,7 @@ import announcementRoutes from "./routes/announcementRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import studentSubjectRoutes from "./routes/studentSubjectRoutes.js";
+import courseRoutes from "./routes/courseRoutes.js";
 import socketHandler from "./socketHandler.js";
 import path from "path";
 import { send } from "./utils/sendEmail.js";
@@ -105,6 +106,7 @@ app.use("/api/announcements", announcementRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/student-subjects", studentSubjectRoutes);
+app.use("/api/courses", courseRoutes);
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), {
   setHeaders: (res, path, stat) => {
     if (!path.includes('.')) {
