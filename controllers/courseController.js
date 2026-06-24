@@ -1,4 +1,5 @@
 import Course from "../models/Course.js"
+import { uploadToCloudinary } from "../utils/cloudinaryHelper.js"
 
 // GET /api/courses - Get courses (admin gets all, students/tutors get only active ones)
 export const getCourses = async (req, res) => {
@@ -35,12 +36,20 @@ export const createCourse = async (req, res) => {
 
     let finalThumbnailUrl = thumbnailUrl || ""
     if (req.files?.thumbnailFile?.[0]) {
-      finalThumbnailUrl = req.files.thumbnailFile[0].path.replace(/\\/g, "/")
+      const uploadResult = await uploadToCloudinary(
+        req.files.thumbnailFile[0].path,
+        "courses/thumbnails"
+      );
+      finalThumbnailUrl = uploadResult.secure_url;
     }
 
     let finalVideoUrl = videoUrl || ""
     if (req.files?.videoFile?.[0]) {
-      finalVideoUrl = req.files.videoFile[0].path.replace(/\\/g, "/")
+      const uploadResult = await uploadToCloudinary(
+        req.files.videoFile[0].path,
+        "courses/videos"
+      );
+      finalVideoUrl = uploadResult.secure_url;
     }
 
     if (!title?.trim() || !description?.trim() || !subject?.trim() || !finalVideoUrl?.trim()) {
@@ -73,12 +82,20 @@ export const updateCourse = async (req, res) => {
     
     let finalThumbnailUrl = thumbnailUrl
     if (req.files?.thumbnailFile?.[0]) {
-      finalThumbnailUrl = req.files.thumbnailFile[0].path.replace(/\\/g, "/")
+      const uploadResult = await uploadToCloudinary(
+        req.files.thumbnailFile[0].path,
+        "courses/thumbnails"
+      );
+      finalThumbnailUrl = uploadResult.secure_url;
     }
 
     let finalVideoUrl = videoUrl
     if (req.files?.videoFile?.[0]) {
-      finalVideoUrl = req.files.videoFile[0].path.replace(/\\/g, "/")
+      const uploadResult = await uploadToCloudinary(
+        req.files.videoFile[0].path,
+        "courses/videos"
+      );
+      finalVideoUrl = uploadResult.secure_url;
     }
 
     const cleanStr = (val) => {

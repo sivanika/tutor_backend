@@ -74,6 +74,49 @@ export const sendApprovalMail = (email, name) => {
 };
 
 // ─────────────────────────────────────────────
+// 💼 JOB APPLICATION MAIL
+// ─────────────────────────────────────────────
+export const sendJobSelectionMail = (email, name, positionTitle) => {
+  return send({
+    to: email,
+    subject: `Application Selected — ${positionTitle} at VishidhAcademy 🎉`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px;border-radius:12px;background:#f9f9fb;border:1px solid #e5e7eb">
+        <h2 style="color:#22c55e;">Congratulations! 🎉</h2>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>We are thrilled to inform you that your application for the position of <strong>${positionTitle}</strong> has been selected!</p>
+        <p>Our recruitment team was highly impressed by your qualifications and experience. We will get in touch with you shortly to schedule an onboarding call and discuss the next steps.</p>
+        <p>Welcome aboard!</p>
+        <br/>
+        <p style="color:#9ca3af;font-size:12px;border-top:1px solid #e5e7eb;padding-top:16px">
+          VishidhAcademy · Careers Team
+        </p>
+      </div>
+    `,
+  });
+};
+
+export const sendJobRejectionMail = (email, name, positionTitle) => {
+  return send({
+    to: email,
+    subject: `Update on your application for ${positionTitle} at VishidhAcademy`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px;border-radius:12px;background:#f9f9fb;border:1px solid #e5e7eb">
+        <h2 style="color:#ef4444;">Application Update</h2>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>Thank you for your interest in the <strong>${positionTitle}</strong> position at VishidhAcademy.</p>
+        <p>After careful review of all applications, we regret to inform you that we will not be moving forward with your application at this time. We had many highly qualified applicants and had to make some very difficult choices.</p>
+        <p>We appreciate the time you took to apply and wish you the best in your job search.</p>
+        <br/>
+        <p style="color:#9ca3af;font-size:12px;border-top:1px solid #e5e7eb;padding-top:16px">
+          VishidhAcademy · Careers Team
+        </p>
+      </div>
+    `,
+  });
+};
+
+// ─────────────────────────────────────────────
 // 🔐 PASSWORD RESET MAIL
 // ─────────────────────────────────────────────
 export const sendPasswordResetMail = (email, resetLink) => {

@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import Feedback from "../models/Feedback.js";
 import Session from "../models/Session.js";
 import { sendPendingApprovalMail } from "../utils/sendEmail.js";
+import { uploadToCloudinary } from "../utils/cloudinaryHelper.js";
 
 const router = express.Router();
 
@@ -234,21 +235,37 @@ router.post(
         }
       }
 
-      // 📂 FILES — normalize to forward slashes for URL compatibility (Windows multer returns backslashes)
+      // 📂 FILES — upload to Cloudinary and save the secure URLs
       if (req.files?.profilePhoto) {
-        user.profilePhoto = req.files.profilePhoto[0].path.replace(/\\/g, "/");
+        const uploadResult = await uploadToCloudinary(
+          req.files.profilePhoto[0].path,
+          "professors/profile-photos"
+        );
+        user.profilePhoto = uploadResult.secure_url;
       }
 
       if (req.files?.degreeCertificate) {
-        user.degreeCertificate = req.files.degreeCertificate[0].path.replace(/\\/g, "/");
+        const uploadResult = await uploadToCloudinary(
+          req.files.degreeCertificate[0].path,
+          "professors/certificates"
+        );
+        user.degreeCertificate = uploadResult.secure_url;
       }
 
       if (req.files?.governmentId) {
-        user.governmentId = req.files.governmentId[0].path.replace(/\\/g, "/");
+        const uploadResult = await uploadToCloudinary(
+          req.files.governmentId[0].path,
+          "professors/ids"
+        );
+        user.governmentId = uploadResult.secure_url;
       }
 
       if (req.files?.videoIntroduction) {
-        user.videoIntroduction = req.files.videoIntroduction[0].path.replace(/\\/g, "/");
+        const uploadResult = await uploadToCloudinary(
+          req.files.videoIntroduction[0].path,
+          "professors/videos"
+        );
+        user.videoIntroduction = uploadResult.secure_url;
       }
 
       // 🔐 STATUS

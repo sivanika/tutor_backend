@@ -4,6 +4,7 @@ import { protect } from "../middleware/authMiddleware.js";
 import User from "../models/User.js";
 import SubscriptionPlan from "../models/SubscriptionPlan.js";
 import { sendPendingApprovalMail } from "../utils/sendEmail.js";
+import { uploadToCloudinary } from "../utils/cloudinaryHelper.js";
 
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
@@ -177,12 +178,20 @@ router.put(
         }
       }
 
-      // File uploads
+      // File uploads to Cloudinary
       if (req.files?.studentPhoto) {
-        user.studentPhoto = req.files.studentPhoto[0].path.replace(/\\/g, "/");
+        const uploadResult = await uploadToCloudinary(
+          req.files.studentPhoto[0].path,
+          "students/photos"
+        );
+        user.studentPhoto = uploadResult.secure_url;
       }
       if (req.files?.studentDocument) {
-        user.studentDocument = req.files.studentDocument[0].path.replace(/\\/g, "/");
+        const uploadResult = await uploadToCloudinary(
+          req.files.studentDocument[0].path,
+          "students/documents"
+        );
+        user.studentDocument = uploadResult.secure_url;
       }
 
       // 🔥 CRITICAL FIX

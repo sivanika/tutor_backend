@@ -1,6 +1,8 @@
 import Course from "../models/Course.js"
 import Module from "../models/Module.js"
 import Lesson from "../models/Lesson.js"
+import { uploadToCloudinary } from "../utils/cloudinaryHelper.js";
+
 
 // ─────────────────────────────────────────────────────────────
 //  COURSE CRUD (LMS-aware — uses status field)
@@ -73,14 +75,23 @@ export const createLMSCourse = async (req, res) => {
       price, startDate, endDate, tags, category, status,
     } = req.body
 
-    // Handle file uploads (thumbnail / promo video)
+    // Handle file uploads (thumbnail / promo video) to Cloudinary
     let finalThumbnailUrl = thumbnailUrl || ""
     if (req.files?.thumbnailFile?.[0]) {
-      finalThumbnailUrl = req.files.thumbnailFile[0].path.replace(/\\/g, "/")
+      const uploadResult = await uploadToCloudinary(
+        req.files.thumbnailFile[0].path,
+        "lms/thumbnails"
+      );
+      finalThumbnailUrl = uploadResult.secure_url;
     }
+
     let finalVideoUrl = videoUrl || ""
     if (req.files?.videoFile?.[0]) {
-      finalVideoUrl = req.files.videoFile[0].path.replace(/\\/g, "/")
+      const uploadResult = await uploadToCloudinary(
+        req.files.videoFile[0].path,
+        "lms/videos"
+      );
+      finalVideoUrl = uploadResult.secure_url;
     }
 
     if (!title?.trim() || !description?.trim() || !subject?.trim()) {
@@ -126,11 +137,20 @@ export const updateLMSCourse = async (req, res) => {
 
     let finalThumbnailUrl = thumbnailUrl
     if (req.files?.thumbnailFile?.[0]) {
-      finalThumbnailUrl = req.files.thumbnailFile[0].path.replace(/\\/g, "/")
+      const uploadResult = await uploadToCloudinary(
+        req.files.thumbnailFile[0].path,
+        "lms/thumbnails"
+      );
+      finalThumbnailUrl = uploadResult.secure_url;
     }
+
     let finalVideoUrl = videoUrl
     if (req.files?.videoFile?.[0]) {
-      finalVideoUrl = req.files.videoFile[0].path.replace(/\\/g, "/")
+      const uploadResult = await uploadToCloudinary(
+        req.files.videoFile[0].path,
+        "lms/videos"
+      );
+      finalVideoUrl = uploadResult.secure_url;
     }
 
     const updates = {}
@@ -291,7 +311,11 @@ export const createLesson = async (req, res) => {
     // File upload takes priority over URL
     let finalContentUrl = contentUrl || ""
     if (req.file) {
-      finalContentUrl = req.file.path.replace(/\\/g, "/")
+      const uploadResult = await uploadToCloudinary(
+        req.file.path,
+        "lms/lessons"
+      );
+      finalContentUrl = uploadResult.secure_url;
     }
 
     // Auto-assign order
@@ -334,7 +358,11 @@ export const updateLesson = async (req, res) => {
 
     // File upload takes priority
     if (req.file) {
-      updates.contentUrl = req.file.path.replace(/\\/g, "/")
+      const uploadResult = await uploadToCloudinary(
+        req.file.path,
+        "lms/lessons"
+      );
+      updates.contentUrl = uploadResult.secure_url;
     } else if (contentUrl !== undefined) {
       updates.contentUrl = contentUrl
     }
