@@ -27,20 +27,6 @@ router.get("/", async (req, res) => {
 });
 
 /* ============================
-   PUBLIC — GET SINGLE POST
-   GET /api/blog/:id
-============================ */
-router.get("/:id", async (req, res) => {
-  try {
-    const post = await BlogPost.findById(req.params.id);
-    if (!post) return res.status(404).json({ message: "Post not found" });
-    res.json(post);
-  } catch (err) {
-    res.status(500).json({ message: "Failed to load post" });
-  }
-});
-
-/* ============================
    ADMIN — GET ALL POSTS (including drafts)
    GET /api/blog/admin/all
 ============================ */
@@ -53,6 +39,20 @@ router.get("/admin/all", protect, adminOnly, async (req, res) => {
   } catch (err) {
     console.error("ADMIN BLOG FETCH ERROR:", err);
     res.status(500).json({ message: "Failed to load blog posts" });
+  }
+});
+
+/* ============================
+   PUBLIC — GET SINGLE POST
+   GET /api/blog/:id
+============================ */
+router.get("/:id", async (req, res) => {
+  try {
+    const post = await BlogPost.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    res.json(post);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to load post" });
   }
 });
 
