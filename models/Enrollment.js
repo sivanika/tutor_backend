@@ -22,6 +22,12 @@ const enrollmentSchema = new mongoose.Schema(
     approvedDate:       { type: Date, default: null },
     completedDate:      { type: Date, default: null },
     rejectionReason:    { type: String, default: "" },
+    
+    // Payment details
+    razorpayOrderId:    { type: String },
+    razorpayPaymentId:  { type: String }, // transaction ID
+    paymentStatus:      { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
+    paymentAmount:      { type: Number },
   },
   { timestamps: true }
 )

@@ -247,8 +247,19 @@ export const getCourseProgress = async (req, res) => {
     const { courseId } = req.params
     const studentId = req.user._id
 
-    const progressRecords = await LessonProgress.find({ studentId, courseId })
+    const course = await Course.findById(courseId)
+    if (!course) return res.status(404).json({ message: "Course not found" })
+
     const enrollment = await Enrollment.findOne({ studentId, courseId })
+
+    // Enforce purchase/enrollment check if course is paid and user is not admin
+    if (course.price > 0 && req.user.role !== "admin") {
+      if (!enrollment || (enrollment.status !== "approved" && enrollment.status !== "completed")) {
+        return res.status(403).json({ message: "Access locked. You must enroll/purchase this course to view progress." })
+      }
+    }
+
+    const progressRecords = await LessonProgress.find({ studentId, courseId })
 
     res.json({
       success: true,

@@ -510,4 +510,46 @@ router.get("/earnings", protect, adminOnly, async (req, res) => {
   }
 });
 
+/* ============================
+   GET LMS PAYMENTS AND ENROLLMENTS STATS (LMS PURCHASE ADMIN)
+   ============================ */
+router.get("/lms-payments-stats", protect, adminOnly, async (req, res) => {
+  try {
+    const CoursePayment = (await import("../models/CoursePayment.js")).default;
+    const Enrollment = (await import("../models/Enrollment.js")).default;
+
+    const payments = await CoursePayment.find()
+      .populate("studentId", "name email studentPhoto")
+      .populate("courseId", "title subject price")
+      .sort({ createdAt: -1 });
+
+    const enrollments = await Enrollment.find({ status: { $in: ["approved", "completed"] } })
+      .populate("studentId", "name email studentPhoto")
+      .populate("courseId", "title subject price")
+      .sort({ createdAt: -1 });
+
+    // Calculate revenue summary
+    const successfulPayments = payments.filter((p) => p.status === "success");
+    const totalRevenue = successfulPayments.reduce((acc, p) => acc + p.amount, 0);
+
+    const failedPaymentsCount = payments.filter((p) => p.status === "failed" || p.status === "cancelled").length;
+    const successfulEnrollmentsCount = enrollments.length;
+
+    res.json({
+      success: true,
+      payments,
+      enrollments,
+      summary: {
+        totalRevenue,
+        successfulEnrollmentsCount,
+        failedPaymentsCount,
+        totalPaymentAttempts: payments.length,
+      },
+    });
+  } catch (error) {
+    console.error("LMS payments stats error:", error);
+    res.status(500).json({ message: "Failed to load LMS payment statistics" });
+  }
+});
+
 export default router;

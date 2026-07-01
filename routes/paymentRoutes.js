@@ -9,6 +9,13 @@ import {
     razorpayWebhook,
 } from "../controllers/paymentController.js";
 
+import {
+    createCourseOrder,
+    verifyCoursePayment,
+    cancelCoursePayment,
+    activateFreeCourse,
+} from "../controllers/coursePaymentController.js";
+
 const router = express.Router();
 
 // Create a Razorpay order (for paid plans)
@@ -25,6 +32,12 @@ router.post("/activate-professor", protect, activateProfessorListing);
 
 // Get current user subscription info
 router.get("/subscription", protect, getSubscription);
+
+// Course Payments
+router.post("/course/create-order", protect, createCourseOrder);
+router.post("/course/verify", protect, verifyCoursePayment);
+router.post("/course/cancel", protect, cancelCoursePayment);
+router.post("/course/activate-free", protect, activateFreeCourse);
 
 // Razorpay Webhook (No protect middleware!)
 router.post("/webhook", razorpayWebhook);

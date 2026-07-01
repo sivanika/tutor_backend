@@ -1,6 +1,7 @@
 import Course from "../models/Course.js"
 import Module from "../models/Module.js"
 import Lesson from "../models/Lesson.js"
+import Enrollment from "../models/Enrollment.js"
 import { uploadToCloudinary } from "../utils/cloudinaryHelper.js";
 
 
@@ -43,6 +44,20 @@ export const getLMSCourseById = async (req, res) => {
       return res.status(403).json({ message: "Course not available" })
     }
 
+    // Check enrollment for paid courses
+    let isEnrolled = false
+    if (req.user) {
+      const enrollment = await Enrollment.findOne({
+        studentId: req.user._id || req.user.id,
+        courseId: course._id,
+        status: { $in: ["approved", "completed"] },
+      })
+      if (enrollment) isEnrolled = true
+    }
+
+    // Non-admins can only view lessons content if course is free or they are enrolled
+    const showContent = isAdmin || course.price === 0 || isEnrolled
+
     // Fetch modules ordered by `order`
     const modules = await Module.find({ courseId: course._id }).sort({ order: 1 })
 
@@ -53,10 +68,18 @@ export const getLMSCourseById = async (req, res) => {
     // Nest lessons inside their module
     const modulesWithLessons = modules.map((mod) => ({
       ...mod.toObject(),
-      lessons: lessons.filter((l) => l.moduleId.toString() === mod._id.toString()),
+      lessons: lessons
+        .filter((l) => l.moduleId.toString() === mod._id.toString())
+        .map((l) => {
+          const lObj = l.toObject()
+          if (!showContent) {
+            lObj.contentUrl = "" // Hide sensitive content url
+          }
+          return lObj
+        }),
     }))
 
-    res.json({ success: true, course, modules: modulesWithLessons })
+    res.json({ success: true, course, modules: modulesWithLessons, isEnrolled })
   } catch (e) {
     console.error("GET LMS COURSE BY ID:", e)
     res.status(500).json({ message: "Failed to fetch course" })
