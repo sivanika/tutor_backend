@@ -552,4 +552,81 @@ router.get("/lms-payments-stats", protect, adminOnly, async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+//  ADMIN STUDENT DASHBOARD CONTROL ROUTES
+// ─────────────────────────────────────────────────────────────
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import {
+  adminGetCoursesList,
+  getStudentAcademicDetails,
+  adminMarkAttendance,
+  adminGradeAssignment,
+  adminCreateAssignment,
+  adminCreateQuiz,
+  adminCreateEvent,
+  adminCreateDownload,
+  adminResetQuizAttempts,
+  adminListAssignments,
+  adminListQuizzes,
+  adminListEvents,
+  adminListDownloads,
+  adminIssueCertificate,
+} from "../controllers/studentDashboardController.js";
+
+// Multer for resource file uploads
+const dlUploadDir = "uploads/lms/downloads";
+if (!fs.existsSync(dlUploadDir)) fs.mkdirSync(dlUploadDir, { recursive: true });
+
+const dlStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, dlUploadDir),
+  filename:    (_req,  file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+const dlUpload = multer({
+  storage: dlStorage,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB
+});
+
+// Multer for certificate file uploads
+const certUploadDir = "uploads/certs";
+if (!fs.existsSync(certUploadDir)) fs.mkdirSync(certUploadDir, { recursive: true });
+
+const certStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, certUploadDir),
+  filename:    (_req,  file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `cert-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+const certUpload = multer({
+  storage: certStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+});
+
+router.get("/courses-list", protect, adminOnly, adminGetCoursesList);
+router.get("/student/:id/academics", protect, adminOnly, getStudentAcademicDetails);
+router.post("/student/:id/attendance", protect, adminOnly, adminMarkAttendance);
+router.put("/student/:id/assignments/:submissionId/grade", protect, adminOnly, adminGradeAssignment);
+router.post("/assignments", protect, adminOnly, adminCreateAssignment);
+router.post("/quizzes", protect, adminOnly, adminCreateQuiz);
+router.post("/events", protect, adminOnly, adminCreateEvent);
+
+// Downloads — accepts both JSON (fileUrl) and multipart (file upload)
+router.post("/downloads", protect, adminOnly, dlUpload.single("file"), adminCreateDownload);
+
+router.delete("/student/:id/quizzes/:quizId/attempts", protect, adminOnly, adminResetQuizAttempts);
+
+// LMS Content Manager — list all records
+router.get("/lms-content/assignments", protect, adminOnly, adminListAssignments);
+router.get("/lms-content/quizzes",     protect, adminOnly, adminListQuizzes);
+router.get("/lms-content/events",      protect, adminOnly, adminListEvents);
+router.get("/lms-content/downloads",   protect, adminOnly, adminListDownloads);
+
+// Certificate issuance
+router.post("/certificates/issue", protect, adminOnly, certUpload.single("file"), adminIssueCertificate);
+
 export default router;

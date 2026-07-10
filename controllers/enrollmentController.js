@@ -3,6 +3,7 @@ import Course from "../models/Course.js"
 import Lesson from "../models/Lesson.js"
 import LessonProgress from "../models/LessonProgress.js"
 import Certificate from "../models/Certificate.js"
+import CoursePayment from "../models/CoursePayment.js"
 
 // ─────────────────────────────────────────────────────────────
 //  STUDENT ACTIONS
@@ -289,6 +290,84 @@ export const getMyCertificates = async (req, res) => {
     res.json({ success: true, certificates })
   } catch (e) {
     res.status(500).json({ message: "Failed to fetch certificates" })
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DASHBOARD STATS
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/lms/dashboard/stats
+ * Aggregated stats for the student dashboard
+ */
+export const getDashboardStats = async (req, res) => {
+  try {
+    const studentId = req.user._id
+
+    const enrollments = await Enrollment.find({ studentId }).lean()
+    const totalCourses   = enrollments.length
+    const inProgress     = enrollments.filter(e => e.status === "approved" && e.progressPercentage < 100).length
+    const completed      = enrollments.filter(e => e.status === "completed").length
+    const certificates   = await Certificate.countDocuments({ studentId })
+
+    // Learning hours: sum watchedSeconds from LessonProgress / 3600
+    const progressAgg = await LessonProgress.aggregate([
+      { $match: { studentId } },
+      { $group: { _id: null, totalSeconds: { $sum: "$watchedSeconds" } } },
+    ])
+    const learningHours = progressAgg.length
+      ? Math.round((progressAgg[0].totalSeconds / 3600) * 10) / 10
+      : 0
+
+    // Last active enrollment (for "Continue Learning")
+    const lastActive = await Enrollment.findOne({
+      studentId,
+      status: "approved",
+    })
+      .sort({ updatedAt: -1 })
+      .populate("courseId", "title thumbnailUrl subject instructor level")
+      .lean()
+
+    res.json({
+      success: true,
+      stats: {
+        totalCourses,
+        inProgress,
+        completed,
+        certificates,
+        learningHours,
+        assignments: { total: 0, submitted: 0, pending: 0 },
+        quizzes:     { total: 0, passed: 0, attempts: 0 },
+        attendance:  0,
+      },
+      lastActive,
+    })
+  } catch (e) {
+    console.error("DASHBOARD STATS:", e)
+    res.status(500).json({ message: "Failed to fetch dashboard stats" })
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PAYMENT HISTORY
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/lms/payments/my
+ * Returns the student's course payment history
+ */
+export const getMyPayments = async (req, res) => {
+  try {
+    const payments = await CoursePayment.find({ studentId: req.user._id })
+      .populate("courseId", "title thumbnailUrl subject")
+      .sort({ createdAt: -1 })
+      .lean()
+
+    res.json({ success: true, payments })
+  } catch (e) {
+    console.error("GET MY PAYMENTS:", e)
+    res.status(500).json({ message: "Failed to fetch payment history" })
   }
 }
 

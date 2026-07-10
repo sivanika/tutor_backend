@@ -25,6 +25,7 @@ import courseRoutes from "./routes/courseRoutes.js";
 import lmsRoutes from "./routes/lmsRoutes.js";
 import careerRoutes from "./routes/careerRoutes.js";
 import blogRoutes from "./routes/blogRoutes.js";
+import liveClassRoutes from "./routes/liveClassRoutes.js";
 import socketHandler from "./socketHandler.js";
 import path from "path";
 import { send } from "./utils/sendEmail.js";
@@ -113,6 +114,7 @@ app.use("/api/courses", courseRoutes);
 app.use("/api/lms", lmsRoutes);
 app.use("/api/careers", careerRoutes);
 app.use("/api/blog", blogRoutes);
+app.use("/api/live-classes", liveClassRoutes);
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), {
   setHeaders: (res, path, stat) => {
     if (!path.includes('.')) {

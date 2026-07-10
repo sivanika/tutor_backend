@@ -30,7 +30,18 @@ import {
   updateVideoProgress,
   getCourseProgress,
   getMyCertificates,
+  getMyPayments,
 } from "../controllers/enrollmentController.js"
+
+import {
+  getDashboardStats,
+  getStudentAssignments,
+  submitAssignment,
+  getStudentQuizzes,
+  attemptQuiz,
+  getStudentCalendar,
+  getStudentDownloads,
+} from "../controllers/studentDashboardController.js"
 
 const router = express.Router()
 
@@ -168,5 +179,19 @@ router.get( "/progress/:courseId",  protect, getCourseProgress)
 //  CERTIFICATE ROUTES
 // ─────────────────────────────────────────────────────────────
 router.get("/certificates/my", protect, getMyCertificates)
+
+// ─────────────────────────────────────────────────────────────
+//  DASHBOARD STATS + PAYMENT HISTORY
+// ─────────────────────────────────────────────────────────────
+router.get("/dashboard/stats", protect, getDashboardStats)
+router.get("/payments/my",     protect, getMyPayments)
+
+// Student dashboard extensions
+router.get("/student/assignments", protect, getStudentAssignments)
+router.post("/student/assignments/:id/submit", protect, submitAssignment)
+router.get("/student/quizzes", protect, getStudentQuizzes)
+router.post("/student/quizzes/:id/attempt", protect, attemptQuiz)
+router.get("/student/calendar", protect, getStudentCalendar)
+router.get("/student/downloads", protect, getStudentDownloads)
 
 export default router
