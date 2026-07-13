@@ -17,6 +17,11 @@ const jobPositionSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    mode: {
+      type: String,
+      enum: ["Remote", "On-site", "Hybrid"],
+      default: "Remote",
+    },
     dept: {
       type: String,
       required: true,
@@ -26,9 +31,28 @@ const jobPositionSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    responsibilities: {
+      type: [String],
+      default: [],
+    },
+    eligibility: {
+      type: [String],
+      default: [],
+    },
     skills: {
       type: [String],
       default: [],
+    },
+    salary: {
+      type: String,
+      default: "",
+    },
+    openings: {
+      type: Number,
+      default: 1,
+    },
+    deadline: {
+      type: Date,
     },
     isOpen: {
       type: Boolean,

@@ -13,9 +13,42 @@ const careerApplicationSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
-    coverLetter: {
+    phone: {
       type: String,
       required: true,
+      trim: true,
+    },
+    location: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    experience: {
+      type: Number,
+      required: true,
+    },
+    employer: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    notice: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    linkedin: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    resumeUrl: {
+      type: String,
+      required: true,
+    },
+    coverLetter: {
+      type: String,
+      default: "",
     },
     positionId: {
       type: String,

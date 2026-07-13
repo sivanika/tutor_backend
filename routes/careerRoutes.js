@@ -1,4 +1,7 @@
 import express from "express";
+import fs from "fs";
+import path from "path";
+import multer from "multer";
 import CareerApplication from "../models/CareerApplication.js";
 import JobPosition from "../models/JobPosition.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
@@ -40,10 +43,18 @@ router.get("/positions/all", protect, adminOnly, async (req, res) => {
 ============================================================ */
 router.post("/positions", protect, adminOnly, async (req, res) => {
   try {
-    const { title, type, location, dept, description, skills } = req.body;
-    if (!title || !type || !location || !dept || !description) {
-      return res.status(400).json({ message: "title, type, location, dept and description are required" });
+    const { title, type, mode, location, dept, description, responsibilities, eligibility, skills, salary, openings, deadline, isOpen, status } = req.body;
+    if (!title || !type || !dept || !description) {
+      return res.status(400).json({ message: "title, type, dept and description are required" });
     }
+
+    const parseTextareaList = (val) => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === "string") {
+        return val.split("\n").map((line) => line.trim()).filter(Boolean);
+      }
+      return [];
+    };
 
     const skillArray = Array.isArray(skills)
       ? skills
@@ -51,15 +62,34 @@ router.post("/positions", protect, adminOnly, async (req, res) => {
       ? skills.split(",").map((s) => s.trim()).filter(Boolean)
       : [];
 
+    let finalIsOpen = true;
+    if (isOpen !== undefined) {
+      finalIsOpen = !!isOpen;
+    } else if (status !== undefined) {
+      finalIsOpen = status === "published";
+    }
+
     const position = await JobPosition.create({
-      title, type, location, dept, description, skills: skillArray, isOpen: true,
+      title,
+      type,
+      mode: mode || "Remote",
+      location: location || "Remote",
+      dept,
+      description,
+      responsibilities: parseTextareaList(responsibilities),
+      eligibility: parseTextareaList(eligibility),
+      skills: skillArray,
+      salary: salary || "",
+      openings: openings !== undefined ? Number(openings) : 1,
+      deadline: deadline || null,
+      isOpen: finalIsOpen,
     });
 
     await AdminLog.create({
       admin: req.user.id,
       action: "Created Job Position",
       target: title,
-      description: `New position "${title}" (${type}, ${location}) added`,
+      description: `New position "${title}" (${type}, ${location || "Remote"}) added`,
     });
 
     res.status(201).json({ success: true, position });
@@ -72,20 +102,44 @@ router.post("/positions", protect, adminOnly, async (req, res) => {
 /* ============================================================
    JOB POSITIONS — ADMIN: update (edit or toggle open/closed)
    PUT /api/careers/positions/:id
-============================================================ */
+ ============================================================ */
 router.put("/positions/:id", protect, adminOnly, async (req, res) => {
   try {
-    const { title, type, location, dept, description, skills, isOpen } = req.body;
+    const { title, type, mode, location, dept, description, responsibilities, eligibility, skills, salary, openings, deadline, isOpen, status } = req.body;
 
     const position = await JobPosition.findById(req.params.id);
     if (!position) return res.status(404).json({ message: "Position not found" });
 
+    const parseTextareaList = (val) => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === "string") {
+        return val.split("\n").map((line) => line.trim()).filter(Boolean);
+      }
+      return [];
+    };
+
     if (title !== undefined) position.title = title;
     if (type !== undefined) position.type = type;
+    if (mode !== undefined) position.mode = mode;
     if (location !== undefined) position.location = location;
     if (dept !== undefined) position.dept = dept;
     if (description !== undefined) position.description = description;
-    if (isOpen !== undefined) position.isOpen = isOpen;
+    if (salary !== undefined) position.salary = salary;
+    if (openings !== undefined) position.openings = Number(openings);
+    if (deadline !== undefined) position.deadline = deadline || null;
+    
+    if (isOpen !== undefined) {
+      position.isOpen = !!isOpen;
+    } else if (status !== undefined) {
+      position.isOpen = status === "published";
+    }
+
+    if (responsibilities !== undefined) {
+      position.responsibilities = parseTextareaList(responsibilities);
+    }
+    if (eligibility !== undefined) {
+      position.eligibility = parseTextareaList(eligibility);
+    }
     if (skills !== undefined) {
       position.skills = Array.isArray(skills)
         ? skills
@@ -136,17 +190,52 @@ router.delete("/positions/:id", protect, adminOnly, async (req, res) => {
 /* ============================
    SUBMIT JOB APPLICATION (PUBLIC)
    POST /api/careers/apply
-============================ */
-router.post("/apply", async (req, res) => {
-  try {
-    const { name, email, coverLetter, positionId, positionTitle } = req.body;
+ ============================ */
+const resumeUploadDir = "uploads/resumes";
+if (!fs.existsSync(resumeUploadDir)) {
+  fs.mkdirSync(resumeUploadDir, { recursive: true });
+}
 
-    if (!name || !email || !coverLetter || !positionId || !positionTitle) {
-      return res.status(400).json({ message: "All fields are required" });
+const resumeStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, resumeUploadDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `resume-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage: resumeStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+});
+
+router.post("/apply", upload.single("resume"), async (req, res) => {
+  try {
+    const { name, email, phone, location, experience, employer, notice, linkedin, coverLetter, positionId, positionTitle } = req.body;
+
+    if (!name || !email || !phone || !location || !experience || !positionId || !positionTitle) {
+      return res.status(400).json({ message: "Name, email, phone, location, experience, positionId and positionTitle are required" });
     }
 
+    if (!req.file) {
+      return res.status(400).json({ message: "Resume / CV file is required" });
+    }
+
+    const resumeUrl = `/uploads/resumes/${req.file.filename}`;
+
     const application = await CareerApplication.create({
-      name, email, coverLetter, positionId, positionTitle,
+      name,
+      email,
+      phone,
+      location,
+      experience: Number(experience),
+      employer: employer || "",
+      notice: notice || "",
+      linkedin: linkedin || "",
+      resumeUrl,
+      coverLetter: coverLetter || "",
+      positionId,
+      positionTitle,
     });
 
     res.status(201).json({
