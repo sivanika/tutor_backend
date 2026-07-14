@@ -32,6 +32,17 @@ const liveClassSchema = new mongoose.Schema(
     prerequisites: { type: [String], default: [] },
     syllabus: { type: [syllabusWeekSchema], default: [] },
     isPublished: { type: Boolean, default: true },
+    cohort: { type: String, default: "" },
+    days: { type: String, default: "" },
+    time: { type: String, default: "" },
+    seatsFilled: { type: Number, default: 0 },
+    statusOverride: { type: String, default: "auto" },
+    platform: { type: String, default: "Zoom" },
+    meetingLink: { type: String, default: "" },
+    autoRecord: { type: Boolean, default: true },
+    trainerPhoto: { type: String, default: "" },
+    trainerBio: { type: String, default: "" },
+    whatsIncluded: { type: [String], default: [] },
   },
   { timestamps: true }
 );

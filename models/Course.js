@@ -25,6 +25,23 @@ const courseSchema = new mongoose.Schema(
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     tags:      [String],
     category:  { type: String, default: "" },
+
+    // ── Pricing & social proof fields ──────────────────────────────────────
+    oldPrice:  { type: Number, default: 0 },
+    students:  { type: String, default: "0" },
+    rating:    { type: Number, default: 0 },
+    reviews:   { type: Number, default: 0 },
+    bestseller:{ type: Boolean, default: false },
+
+    // ── DRM & security ──────────────────────────────────────────────────────
+    drm:       { type: String, default: "Signed URL (expiring)" },
+
+    // ── Assessment & certification ──────────────────────────────────────────
+    passScore:      { type: Number, default: 70 },
+    attemptPolicy:  { type: String, default: "unlimited" },
+    autoCertificate:{ type: Boolean, default: true },
+    certIssuer:     { type: String, default: "Vishidh Academy" },
+    certDomain:     { type: String, default: "vishidhacademy.com" },
   },
   { timestamps: true }
 )

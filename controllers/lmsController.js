@@ -1,3 +1,4 @@
+import mongoose from "mongoose"
 import Course from "../models/Course.js"
 import Module from "../models/Module.js"
 import Lesson from "../models/Lesson.js"
@@ -86,6 +87,95 @@ export const getLMSCourseById = async (req, res) => {
   }
 }
 
+// Sync course chapters helper to handle dynamic module/lesson creation, update, and deletions
+const syncCourseChapters = async (courseId, chaptersList) => {
+  if (!chaptersList || !Array.isArray(chaptersList)) return
+
+  const Module = mongoose.model("Module")
+  const Lesson = mongoose.model("Lesson")
+
+  const moduleIdsToKeep = []
+  const lessonIdsToKeep = []
+
+  for (let mIdx = 0; mIdx < chaptersList.length; mIdx++) {
+    const ch = chaptersList[mIdx]
+    let modDoc
+
+    const quizQuestions = (ch.quiz || []).map(q => ({
+      questionText: q.questionText || q.question || "",
+      options: q.options || [],
+      correctOption: Number(q.correctOption !== undefined ? q.correctOption : (q.correctIndex !== undefined ? q.correctIndex : 0))
+    }))
+
+    const chId = ch._id || ch.id
+    if (chId && mongoose.Types.ObjectId.isValid(chId)) {
+      modDoc = await Module.findByIdAndUpdate(
+        chId,
+        {
+          title: ch.title,
+          order: mIdx,
+          videoUrl: ch.videoUrl || "",
+          pdfUrl: ch.pdfUrl || "",
+          quiz: quizQuestions
+        },
+        { new: true, upsert: true }
+      )
+    } else {
+      modDoc = await Module.create({
+        courseId,
+        title: ch.title,
+        order: mIdx,
+        videoUrl: ch.videoUrl || "",
+        pdfUrl: ch.pdfUrl || "",
+        quiz: quizQuestions
+      })
+    }
+
+    moduleIdsToKeep.push(modDoc._id)
+
+    // Sync subtopics (lessons)
+    if (ch.subtopics && Array.isArray(ch.subtopics)) {
+      for (let lIdx = 0; lIdx < ch.subtopics.length; lIdx++) {
+        const sub = ch.subtopics[lIdx]
+        let lesDoc
+
+        const lessonType = sub.pdfUrl && !sub.videoUrl ? "pdf" : "video"
+        const contentUrl = sub.videoUrl || sub.pdfUrl || ""
+
+        const subId = sub._id || sub.id
+        if (subId && mongoose.Types.ObjectId.isValid(subId)) {
+          lesDoc = await Lesson.findByIdAndUpdate(
+            subId,
+            {
+              moduleId: modDoc._id,
+              courseId,
+              title: sub.title,
+              type: lessonType,
+              contentUrl,
+              order: lIdx
+            },
+            { new: true, upsert: true }
+          )
+        } else {
+          lesDoc = await Lesson.create({
+            moduleId: modDoc._id,
+            courseId,
+            title: sub.title,
+            type: lessonType,
+            contentUrl,
+            order: lIdx
+          })
+        }
+        lessonIdsToKeep.push(lesDoc._id)
+      }
+    }
+  }
+
+  // Delete modules and lessons no longer in the payload
+  await Lesson.deleteMany({ courseId, _id: { $nin: lessonIdsToKeep } })
+  await Module.deleteMany({ courseId, _id: { $nin: moduleIdsToKeep } })
+}
+
 /**
  * POST /api/lms/courses  [Admin only]
  * Create a new LMS course (starts as draft)
@@ -96,6 +186,8 @@ export const createLMSCourse = async (req, res) => {
       title, description, subject, instructor,
       thumbnailUrl, videoUrl, duration, level,
       price, startDate, endDate, tags, category, status,
+      oldPrice, students, rating, reviews, bestseller, drm,
+      passScore, attemptPolicy, autoCertificate, certIssuer, certDomain,
     } = req.body
 
     // Handle file uploads (thumbnail / promo video) to Cloudinary
@@ -138,7 +230,28 @@ export const createLMSCourse = async (req, res) => {
       status:       status || "draft",
       createdBy:    req.user._id,
       isActive:     true,
+      oldPrice:     oldPrice ? Number(oldPrice) : 0,
+      students:     students || "0",
+      rating:       rating ? Number(rating) : 0,
+      reviews:      reviews ? Number(reviews) : 0,
+      bestseller:   bestseller === "true" || bestseller === true,
+      drm:          drm || "Signed URL (expiring)",
+      passScore:    passScore ? Number(passScore) : 70,
+      attemptPolicy:attemptPolicy || "unlimited",
+      autoCertificate: autoCertificate === "true" || autoCertificate === true || autoCertificate === undefined,
+      certIssuer:   certIssuer || "Vishidh Academy",
+      certDomain:   certDomain || "vishidhacademy.com",
     })
+
+    let chaptersList = []
+    if (req.body.chapters) {
+      try {
+        chaptersList = JSON.parse(req.body.chapters)
+      } catch (err) {
+        console.error("Failed to parse chapters JSON in create:", err)
+      }
+    }
+    await syncCourseChapters(course._id, chaptersList)
 
     res.status(201).json({ success: true, course })
   } catch (e) {
@@ -156,6 +269,8 @@ export const updateLMSCourse = async (req, res) => {
       title, description, subject, instructor,
       thumbnailUrl, videoUrl, duration, level,
       price, startDate, endDate, tags, category, status, isActive,
+      oldPrice, students, rating, reviews, bestseller, drm,
+      passScore, attemptPolicy, autoCertificate, certIssuer, certDomain,
     } = req.body
 
     let finalThumbnailUrl = thumbnailUrl
@@ -192,12 +307,33 @@ export const updateLMSCourse = async (req, res) => {
     if (category !== undefined)               updates.category     = category?.trim() || ""
     if (status)                               updates.status       = status
     if (isActive !== undefined)               updates.isActive     = isActive === "true" || isActive === true
+    if (oldPrice !== undefined)               updates.oldPrice     = Number(oldPrice)
+    if (students !== undefined)               updates.students     = students
+    if (rating !== undefined)                 updates.rating       = Number(rating)
+    if (reviews !== undefined)                updates.reviews      = Number(reviews)
+    if (bestseller !== undefined)             updates.bestseller   = bestseller === "true" || bestseller === true
+    if (drm !== undefined)                    updates.drm          = drm
+    if (passScore !== undefined)              updates.passScore    = Number(passScore)
+    if (attemptPolicy !== undefined)          updates.attemptPolicy= attemptPolicy
+    if (autoCertificate !== undefined)        updates.autoCertificate = autoCertificate === "true" || autoCertificate === true
+    if (certIssuer !== undefined)             updates.certIssuer   = certIssuer
+    if (certDomain !== undefined)             updates.certDomain   = certDomain
 
     const course = await Course.findByIdAndUpdate(req.params.id, updates, {
       new: true,
       runValidators: true,
     })
     if (!course) return res.status(404).json({ message: "Course not found" })
+
+    if (req.body.chapters !== undefined) {
+      let chaptersList = []
+      try {
+        chaptersList = JSON.parse(req.body.chapters)
+      } catch (err) {
+        console.error("Failed to parse chapters JSON in update:", err)
+      }
+      await syncCourseChapters(course._id, chaptersList)
+    }
 
     res.json({ success: true, course })
   } catch (e) {

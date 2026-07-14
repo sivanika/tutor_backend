@@ -9,6 +9,15 @@ const moduleSchema = new mongoose.Schema(
     },
     title: { type: String, required: true, trim: true },
     order: { type: Number, default: 0 }, // display order within course
+    videoUrl: { type: String, default: "" },
+    pdfUrl: { type: String, default: "" },
+    quiz: [
+      {
+        questionText: { type: String, required: true },
+        options: [{ type: String, required: true }],
+        correctOption: { type: Number, required: true }
+      }
+    ],
   },
   { timestamps: true }
 )
