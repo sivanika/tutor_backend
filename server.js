@@ -4,6 +4,7 @@ import http from "http"
 import { Server } from "socket.io"
 import cors from "cors"
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js"
 import adminRoutes from "./routes/adminRoutes.js"
@@ -126,7 +127,22 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), {
  app.post("/send-email", async (req, res) => {
    const { to, subject, message } = req.body;
    try {
-     await send({ to, subject, html: message });
+     // Use Gmail SMTP via Nodemailer for reliable delivery to any email address
+     const transporter = nodemailer.createTransport({
+       service: "gmail",
+       auth: {
+         user: process.env.GMAIL_USER,   // sender Gmail address
+         pass: process.env.GMAIL_PASS,   // Gmail App Password (16-char)
+       },
+     });
+
+     await transporter.sendMail({
+       from: `"VishidhAcademy" <${process.env.GMAIL_USER}>`,
+       to,
+       subject,
+       html: message,
+     });
+
      res.json({ success: true, message: "Email sent successfully" });
    } catch (error) {
      console.error("Email send error:", error);

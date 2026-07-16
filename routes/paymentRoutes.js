@@ -16,6 +16,15 @@ import {
     activateFreeCourse,
 } from "../controllers/coursePaymentController.js";
 
+import {
+    createLiveClassOrder,
+    verifyLiveClassPayment,
+    cancelLiveClassPayment,
+    activateFreeLiveClass,
+    checkLiveClassEnrollment,
+    getEnrolledLiveClasses,
+} from "../controllers/liveClassPaymentController.js";
+
 const router = express.Router();
 
 // Create a Razorpay order (for paid plans)
@@ -38,6 +47,14 @@ router.post("/course/create-order", protect, createCourseOrder);
 router.post("/course/verify", protect, verifyCoursePayment);
 router.post("/course/cancel", protect, cancelCoursePayment);
 router.post("/course/activate-free", protect, activateFreeCourse);
+
+// Live Class Payments
+router.post("/live-class/create-order", protect, createLiveClassOrder);
+router.post("/live-class/verify", protect, verifyLiveClassPayment);
+router.post("/live-class/cancel", protect, cancelLiveClassPayment);
+router.post("/live-class/activate-free", protect, activateFreeLiveClass);
+router.get("/live-class/check/:liveClassId", protect, checkLiveClassEnrollment);
+router.get("/live-class/enrolled", protect, getEnrolledLiveClasses);
 
 // Razorpay Webhook (No protect middleware!)
 router.post("/webhook", razorpayWebhook);
