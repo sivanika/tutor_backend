@@ -12,9 +12,9 @@ const router = express.Router();
 
 /* ============================================================
    JOB POSITIONS — PUBLIC
-   GET /api/careers/positions   → list all open positions
+   GET /api/careers or GET /api/careers/positions → list all open positions
 ============================================================ */
-router.get("/positions", async (req, res) => {
+const getOpenPositions = async (req, res) => {
   try {
     const positions = await JobPosition.find({ isOpen: true }).sort({ createdAt: -1 });
     res.json(positions);
@@ -22,7 +22,10 @@ router.get("/positions", async (req, res) => {
     console.error("POSITIONS FETCH ERROR:", err);
     res.status(500).json({ message: "Failed to fetch positions" });
   }
-});
+};
+
+router.get("/", getOpenPositions);
+router.get("/positions", getOpenPositions);
 
 /* ============================================================
    JOB POSITIONS — ADMIN: get ALL (open + closed)
