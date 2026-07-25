@@ -23,7 +23,7 @@ export const getAllAnnouncements = async (req, res) => {
 // POST /api/announcements — admin only, create
 export const createAnnouncement = async (req, res) => {
   try {
-    const { title, text, icon, priority, active } = req.body
+    const { title, text, icon, priority, active, link } = req.body
     if (!title?.trim() || !text?.trim())
       return res.status(400).json({ message: "Title and text are required" })
 
@@ -33,6 +33,7 @@ export const createAnnouncement = async (req, res) => {
       icon: icon?.trim() || "📢",
       priority: !!priority,
       active: active !== false,
+      link: link?.trim() || "",
       createdBy: req.user._id,
     })
     res.status(201).json(item)
@@ -44,10 +45,10 @@ export const createAnnouncement = async (req, res) => {
 // PUT /api/announcements/:id — admin only, update
 export const updateAnnouncement = async (req, res) => {
   try {
-    const { title, text, icon, priority, active } = req.body
+    const { title, text, icon, priority, active, link } = req.body
     const item = await Announcement.findByIdAndUpdate(
       req.params.id,
-      { title, text, icon, priority, active },
+      { title, text, icon, priority, active, link: link?.trim() || "" },
       { new: true, runValidators: true }
     )
     if (!item) return res.status(404).json({ message: "Not found" })
