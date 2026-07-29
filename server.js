@@ -124,48 +124,48 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), {
   }
 }));
  
- app.post(["/send-email", "/api/send-email"], async (req, res) => {
-   const { to, subject, message } = req.body;
-   try {
-     // 1. Try Resend if API key is present
-     if (process.env.RESEND_API_KEY) {
-       try {
-         await send({ to, subject, html: message });
-         return res.json({ success: true, message: "Email sent successfully" });
-       } catch (resendErr) {
-         console.warn("Resend failed, trying Gmail fallback...", resendErr?.message || resendErr);
-       }
-     }
+  app.post(["/send-email", "/api/send-email"], async (req, res) => {
+    const { to, subject, message } = req.body;
+    try {
+      // 1. Try Gmail SMTP via Nodemailer FIRST (Delivers directly to Gmail Inbox without going to Spam)
+      const gmailUser = process.env.GMAIL_USER;
+      const gmailPass = process.env.GMAIL_PASS?.replace(/\s+/g, "");
 
-     // 2. Try Gmail SMTP via Nodemailer
-     const gmailUser = process.env.GMAIL_USER;
-     const gmailPass = process.env.GMAIL_PASS?.replace(/\s+/g, "");
+      if (gmailUser && gmailPass) {
+        try {
+          const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+              user: gmailUser,
+              pass: gmailPass,
+            },
+          });
 
-     if (gmailUser && gmailPass) {
-       const transporter = nodemailer.createTransport({
-         service: "gmail",
-         auth: {
-           user: gmailUser,
-           pass: gmailPass,
-         },
-       });
+          await transporter.sendMail({
+            from: `"VishidhAcademy" <${gmailUser}>`,
+            to: to || gmailUser,
+            subject,
+            html: message,
+          });
 
-       await transporter.sendMail({
-         from: `"VishidhAcademy" <${gmailUser}>`,
-         to,
-         subject,
-         html: message,
-       });
+          return res.json({ success: true, message: "Email sent successfully via Gmail SMTP" });
+        } catch (gmailErr) {
+          console.warn("Gmail SMTP failed, trying Resend fallback...", gmailErr?.message || gmailErr);
+        }
+      }
 
-       return res.json({ success: true, message: "Email sent successfully" });
-     }
+      // 2. Fallback to Resend if Gmail SMTP is not configured or fails
+      if (process.env.RESEND_API_KEY) {
+        await send({ to: to || gmailUser, subject, html: message });
+        return res.json({ success: true, message: "Email sent successfully via Resend" });
+      }
 
-     throw new Error("No valid email service configured on server (RESEND_API_KEY or GMAIL_USER/GMAIL_PASS missing)");
-   } catch (error) {
-     console.error("Email send error:", error);
-     res.status(500).json({ success: false, message: error.message || "Failed to send email" });
-   }
- });
+      throw new Error("No valid email service configured on server (GMAIL_USER/GMAIL_PASS or RESEND_API_KEY missing)");
+    } catch (error) {
+      console.error("Email send error:", error);
+      res.status(500).json({ success: false, message: error.message || "Failed to send email" });
+    }
+  });
 
 // ✅ CREATE HTTP SERVER FIRST
 const server = http.createServer(app)
