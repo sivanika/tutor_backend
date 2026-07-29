@@ -124,29 +124,46 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), {
   }
 }));
  
- app.post("/send-email", async (req, res) => {
+ app.post(["/send-email", "/api/send-email"], async (req, res) => {
    const { to, subject, message } = req.body;
    try {
-     // Use Gmail SMTP via Nodemailer for reliable delivery to any email address
-     const transporter = nodemailer.createTransport({
-       service: "gmail",
-       auth: {
-         user: process.env.GMAIL_USER,   // sender Gmail address
-         pass: process.env.GMAIL_PASS,   // Gmail App Password (16-char)
-       },
-     });
+     // 1. Try Resend if API key is present
+     if (process.env.RESEND_API_KEY) {
+       try {
+         await send({ to, subject, html: message });
+         return res.json({ success: true, message: "Email sent successfully" });
+       } catch (resendErr) {
+         console.warn("Resend failed, trying Gmail fallback...", resendErr?.message || resendErr);
+       }
+     }
 
-     await transporter.sendMail({
-       from: `"VishidhAcademy" <${process.env.GMAIL_USER}>`,
-       to,
-       subject,
-       html: message,
-     });
+     // 2. Try Gmail SMTP via Nodemailer
+     const gmailUser = process.env.GMAIL_USER;
+     const gmailPass = process.env.GMAIL_PASS?.replace(/\s+/g, "");
 
-     res.json({ success: true, message: "Email sent successfully" });
+     if (gmailUser && gmailPass) {
+       const transporter = nodemailer.createTransport({
+         service: "gmail",
+         auth: {
+           user: gmailUser,
+           pass: gmailPass,
+         },
+       });
+
+       await transporter.sendMail({
+         from: `"VishidhAcademy" <${gmailUser}>`,
+         to,
+         subject,
+         html: message,
+       });
+
+       return res.json({ success: true, message: "Email sent successfully" });
+     }
+
+     throw new Error("No valid email service configured on server (RESEND_API_KEY or GMAIL_USER/GMAIL_PASS missing)");
    } catch (error) {
      console.error("Email send error:", error);
-     res.status(500).json({ success: false, message: "Failed to send email" });
+     res.status(500).json({ success: false, message: error.message || "Failed to send email" });
    }
  });
 
